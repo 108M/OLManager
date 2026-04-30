@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { UpdateInfo, UpdateProgress } from "../../services/updaterService";
+import { UpdateInfo } from "../../services/updaterService";
 import { Download, X, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface UpdateModalProps {
   updateInfo: UpdateInfo;
   downloading: boolean;
-  progress: UpdateProgress | null;
+  progress: { percent: number; contentLength?: number } | null;
   error: string | null;
   onInstall: () => void;
   onDismiss: () => void;
@@ -21,14 +21,7 @@ export default function UpdateModal({
 }: UpdateModalProps) {
   const { t } = useTranslation();
 
-  const contentLength = progress?.content_length ?? 0;
-  const chunkLength = progress?.chunk_length ?? 0;
-  const percent =
-    contentLength > 0 && chunkLength > 0
-      ? Math.min(100, Math.round((chunkLength / contentLength) * 100))
-      : downloading
-        ? 0
-        : null;
+  const percent = progress?.percent ?? (downloading ? 0 : null);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

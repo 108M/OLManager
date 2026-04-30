@@ -1,18 +1,17 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   checkForUpdate,
   downloadAndInstallUpdate,
-  onUpdateProgress,
   UpdateInfo,
-  UpdateProgress,
 } from "../services/updaterService";
+import type { DownloadEvent } from "../services/updaterService";
 
 interface UpdaterState {
   updateAvailable: boolean;
   updateInfo: UpdateInfo | null;
   checking: boolean;
   downloading: boolean;
-  progress: UpdateProgress | null;
+  progress: { percent: number; contentLength?: number } | null;
   error: string | null;
   dismissed: boolean;
 }
@@ -27,8 +26,6 @@ export function useUpdater(checkOnMount = true) {
     error: null,
     dismissed: false,
   });
-
-  const unlistenRef = useRef<(() => void) | null>(null);
 
   const check = useCallback(async () => {
     setState((prev) => ({ ...prev, checking: true, error: null }));
@@ -63,9 +60,40 @@ export function useUpdater(checkOnMount = true) {
   }, []);
 
   const install = useCallback(async () => {
-    setState((prev) => ({ ...prev, downloading: true, error: null }));
+    setState((prev) => ({ ...prev, downloading: true, error: null, progress: null }));
     try {
-      await downloadAndInstallUpdate();
+      let totalBytes = 0;
+      await downloadAndInstallUpdate((event: DownloadEvent) => {
+        switch (event.event) {
+          case "Started":
+            totalBytes = event.data.contentLength || 0;
+            setState((prev) => ({
+              ...prev,
+              progress: { percent: 0, contentLength: totalBytes },
+            }));
+            break;
+          case "Progress":
+            setState((prev) => {
+              const current =
+                prev.progress && prev.progress.percent !== undefined
+                  ? prev.progress.percent + event.data.chunkLength
+                  : event.data.chunkLength;
+              const percent =
+                totalBytes > 0 ? Math.min(100, Math.round((current / totalBytes) * 100)) : 0;
+              return {
+                ...prev,
+                progress: { percent, contentLength: totalBytes },
+              };
+            });
+            break;
+          case "Finished":
+            setState((prev) => ({
+              ...prev,
+              progress: { percent: 100, contentLength: totalBytes },
+            }));
+            break;
+        }
+      });
     } catch (err) {
       setState((prev) => ({
         ...prev,
@@ -73,21 +101,6 @@ export function useUpdater(checkOnMount = true) {
         error: err instanceof Error ? err.message : String(err),
       }));
     }
-  }, []);
-
-  useEffect(() => {
-    let unlisten: (() => void) | null = null;
-
-    onUpdateProgress((p) => {
-      setState((prev) => ({ ...prev, progress: p }));
-    }).then((fn) => {
-      unlisten = fn;
-      unlistenRef.current = fn;
-    });
-
-    return () => {
-      if (unlisten) unlisten();
-    };
   }, []);
 
   useEffect(() => {
