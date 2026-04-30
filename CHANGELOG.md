@@ -4,6 +4,12 @@ All notable changes to OLManager will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses GPL-3.0 licensing inherited from the OpenFootManager lineage unless otherwise documented.
 
+## [0.2.1] - 2026-04-30
+
+### Fixed
+
+- CI `generate-latest-json` job now checks out the repo so `gh release upload` has the correct repository context.
+
 ## [0.2.0] - 2026-04-30
 
 ### Added
