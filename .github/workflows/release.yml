@@ -274,7 +274,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: olemanager-*
+          pattern: olmanager-*
 
       - name: Generate latest.json
         shell: python
