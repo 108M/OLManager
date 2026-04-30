@@ -4,6 +4,12 @@ All notable changes to OLManager will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses GPL-3.0 licensing inherited from the OpenFootManager lineage unless otherwise documented.
 
+## [0.1.4] - 2026-04-30
+
+### Fixed
+
+- Added `repository` field to `Cargo.toml` so `tauri-plugin-updater` can correctly resolve GitHub Releases API.
+
 ## [0.1.3] - 2026-04-30
 
 ### Added
