@@ -1,0 +1,17 @@
+esta es la contraseña que protegia la password o eso : asdlk10...
+
+
+
+Deriving a key from the password in order to encrypt the secret key... 
+Your keys were generated successfully!
+
+Private: (Keep it secret!)
+dW50cn...
+Public:
+dW50cnVzd...
+Environment variables used to sign:
+- `TAURI_SIGNING_PRIVATE_KEY`: String of your private key
+- `TAURI_SIGNING_PRIVATE_KEY_PATH`: Path to your private key file
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`:  Your private key password (optional if key has no password)
+
+ATTENTION: If you lose your private key OR password, you'll not be able to sign your update package and updates will not work
