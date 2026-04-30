@@ -4,6 +4,13 @@ All notable changes to OLManager will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses GPL-3.0 licensing inherited from the OpenFootManager lineage unless otherwise documented.
 
+## [0.1.5] - 2026-04-30
+
+### Fixed
+
+- Added `bundle.createUpdaterArtifacts: true` to `tauri.conf.json` so Tauri generates `.sig` signature files during the build.
+- Added `updater:default` permission to `capabilities/default.json` so the frontend can call updater APIs.
+
 ## [0.1.4] - 2026-04-30
 
 ### Fixed
