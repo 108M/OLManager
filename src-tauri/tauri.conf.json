@@ -41,7 +41,9 @@
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI5RTkwRjU2MTZBN0NBRDUKUldUVnlxY1dWZy9wS1F5ajNGOWszM3FhQUdzdXRlK2hzMHB4d0xyakp0eXhheUxrL0xQL2R4eU8K",
-      "endpoints": [],
+      "endpoints": [
+        "https://github.com/108M/OLManager/releases/latest/download/latest.json"
+      ],
       "windows": {
         "installMode": "passive"
       }
