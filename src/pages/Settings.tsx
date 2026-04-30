@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
@@ -52,6 +52,8 @@ export default function Settings() {
   const [isFullscreen, setIsFullscreen] = useState(
     !!document.fullscreenElement,
   );
+  const [showUpToDate, setShowUpToDate] = useState(false);
+  const prevChecking = useRef(checkingUpdate);
   const selectedLanguage = SUPPORTED_LANGUAGES.some(
     (lang) => lang.code === settings.language,
   )
@@ -87,6 +89,16 @@ export default function Settings() {
       i18n.changeLanguage(selectedLanguage);
     }
   }, [loaded, selectedLanguage, i18n]);
+
+  // Show "up to date" feedback when a manual check completes with no update
+  useEffect(() => {
+    if (prevChecking.current && !checkingUpdate && !updateAvailable) {
+      setShowUpToDate(true);
+      const timer = setTimeout(() => setShowUpToDate(false), 3000);
+      return () => clearTimeout(timer);
+    }
+    prevChecking.current = checkingUpdate;
+  }, [checkingUpdate, updateAvailable]);
 
   const handleUpdate = (partial: Partial<AppSettings>) => {
     updateSettings(partial);
@@ -469,6 +481,14 @@ export default function Settings() {
                 {t("settings.updateAvailableDetail", {
                   version: updateInfo.version,
                 })}
+              </p>
+            </div>
+          )}
+
+          {showUpToDate && (
+            <div className="rounded-lg bg-green-500/5 border border-green-500/20 p-3">
+              <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                {t("settings.upToDate")}
               </p>
             </div>
           )}

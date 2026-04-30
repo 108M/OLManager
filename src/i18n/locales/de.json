@@ -1534,7 +1534,8 @@
     "checking": "Prüfe...",
     "updateAvailable": "Aktualisierung verfügbar",
     "checkNow": "Jetzt prüfen",
-    "updateAvailableDetail": "Version {{version}} ist verfügbar"
+    "updateAvailableDetail": "Version {{version}} ist verfügbar",
+    "upToDate": "Du hast die neueste Version"
   },
   "updater": {
     "title": "Aktualisierung verfügbar",

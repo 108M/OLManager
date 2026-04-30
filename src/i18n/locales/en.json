@@ -1534,7 +1534,8 @@
     "checking": "Checking...",
     "updateAvailable": "Update Available",
     "checkNow": "Check Now",
-    "updateAvailableDetail": "Version {{version}} is available"
+    "updateAvailableDetail": "Version {{version}} is available",
+    "upToDate": "You're up to date"
   },
   "updater": {
     "title": "Update Available",

@@ -1136,7 +1136,8 @@
     "checking": "Controllo...",
     "updateAvailable": "Aggiornamento Disponibile",
     "checkNow": "Controlla Ora",
-    "updateAvailableDetail": "La versione {{version}} è disponibile"
+    "updateAvailableDetail": "La versione {{version}} è disponibile",
+    "upToDate": "Hai l'ultima versione"
   },
   "updater": {
     "title": "Aggiornamento Disponibile",

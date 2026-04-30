@@ -1540,7 +1540,8 @@
     "checking": "Comprobando...",
     "updateAvailable": "Actualización Disponible",
     "checkNow": "Comprobar Ahora",
-    "updateAvailableDetail": "La versión {{version}} está disponible"
+    "updateAvailableDetail": "La versión {{version}} está disponible",
+    "upToDate": "Tienes la última versión"
   },
   "updater": {
     "title": "Actualización Disponible",

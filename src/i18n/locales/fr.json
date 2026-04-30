@@ -1542,7 +1542,8 @@
     "checking": "Vérification...",
     "updateAvailable": "Mise à Jour Disponible",
     "checkNow": "Vérifier Maintenant",
-    "updateAvailableDetail": "La version {{version}} est disponible"
+    "updateAvailableDetail": "La version {{version}} est disponible",
+    "upToDate": "Vous êtes à jour"
   },
   "updater": {
     "title": "Mise à Jour Disponible",
