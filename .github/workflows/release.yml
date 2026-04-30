@@ -94,7 +94,8 @@ jobs:
         run: |
           cat > dist-release/SIGNING_STATUS.txt <<'EOF'
           Platform binaries are generated on GitHub-hosted runners.
-          Windows and macOS bundles are unsigned; macOS notarization is not enabled until maintainers configure signing/notarization secrets and document support policy.
+          Update bundles are signed with an Ed25519 key for tauri-plugin-updater verification.
+          Windows and macOS installer-level signing/notarization is not enabled until maintainers configure additional certificates.
           EOF
 
       - name: Generate source checksums
@@ -166,6 +167,9 @@ jobs:
         run: npm ci
 
       - name: Build Tauri bundle
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build
 
       - name: Collect bundle artifacts
@@ -192,6 +196,7 @@ jobs:
               ".exe",
               ".msi",
               ".rpm",
+              ".sig",
           )
           allowed_double_suffixes = (".app.tar.gz",)
 

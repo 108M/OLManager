@@ -1,6 +1,7 @@
 mod application;
 mod commands;
 use commands::*;
+use commands::updater;
 
 use application::lol_sim_v2::LolSimV2StoreState;
 use db::save_manager::SaveManager;
@@ -22,6 +23,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
@@ -174,7 +176,9 @@ pub fn run() {
             lol_sim_v2_skip_to_end,
             save_manager_avatar,
             load_manager_avatar,
-            update_manager_profile
+            update_manager_profile,
+            updater::check_for_update,
+            updater::download_and_install_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

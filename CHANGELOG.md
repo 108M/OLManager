@@ -4,6 +4,21 @@ All notable changes to OLManager will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses GPL-3.0 licensing inherited from the OpenFootManager lineage unless otherwise documented.
 
+## [Unreleased]
+
+### Added
+
+- Integrated `tauri-plugin-updater` for automatic updates via GitHub Releases.
+- Added update check on app startup with modal prompt to install or dismiss.
+- Added manual "Check for Updates" button in Settings.
+- Added Ed25519 bundle signing for update verification.
+- Added updater-related translations across all 7 supported languages.
+
+### Changed
+
+- Release workflow now signs bundles with `TAURI_SIGNING_PRIVATE_KEY` and uploads `.sig` files.
+- `SIGNING_STATUS.txt` updated to reflect updater-level signing policy.
+
 ## [0.1.1] - 2026-04-28
 
 ### Added
