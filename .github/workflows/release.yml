@@ -247,7 +247,7 @@ jobs:
               platform_info = {
                   "platform": tauri_target,
                   "signature": sig_content,
-                  "url": f"https://github.com/108M/OLManager/releases/download/{tag_name}/{main_file.name}",
+                    "url": f"https://github.com/108M/OLManager/releases/download/{tag_name}/{main_file.name.replace(' ', '.')}",
               }
               (out_dir / "platform-info.json").write_text(json.dumps(platform_info, indent=2))
 
