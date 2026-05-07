@@ -1,8 +1,20 @@
+use chrono::Datelike;
 use log::info;
 use tauri::State;
 
 use ofm_core::game::Game;
 use ofm_core::state::StateManager;
+
+fn is_normal_staff_hiring_window_open(game: &Game) -> bool {
+    let context = &game.season_context;
+    if context.season_start.is_some() {
+        return context.phase != domain::season::SeasonPhase::InSeason;
+    }
+
+    let month = game.clock.current_date.month();
+    // Fallback when season context is missing: offseason/winter->spring window.
+    month <= 5 || month == 12
+}
 
 #[tauri::command]
 pub fn hire_staff(state: State<'_, StateManager>, staff_id: String) -> Result<Game, String> {
@@ -21,6 +33,13 @@ fn hire_staff_internal(state: &StateManager, staff_id: &str) -> Result<Game, Str
         .clone()
         .ok_or("No team assigned".to_string())?;
 
+    if !is_normal_staff_hiring_window_open(&game) {
+        return Err(
+            "Staff hiring is locked right now. Normal hires are only available during offseason (winter to spring)."
+                .to_string(),
+        );
+    }
+
     let staff = game
         .staff
         .iter_mut()
@@ -33,8 +52,12 @@ fn hire_staff_internal(state: &StateManager, staff_id: &str) -> Result<Game, Str
 
     staff.team_id = Some(team_id.clone());
 
-    // Deduct wage from team budget
+    // Immediate hiring impact: reserve budget from real cash pool now.
     if let Some(team) = game.teams.iter_mut().find(|t| t.id == team_id) {
+        if team.finance < staff.wage as i64 {
+            return Err("Insufficient club funds to hire this staff member".to_string());
+        }
+        team.finance -= staff.wage as i64;
         team.season_expenses += staff.wage as i64;
     }
 
@@ -64,6 +87,7 @@ mod tests {
             25_000,
         );
         team.manager_id = Some("manager-1".to_string());
+        team.finance = 200_000;
         team
     }
 
@@ -92,7 +116,7 @@ mod tests {
     }
 
     fn make_game() -> Game {
-        let clock = GameClock::new(Utc.with_ymd_and_hms(2026, 8, 1, 12, 0, 0).unwrap());
+        let clock = GameClock::new(Utc.with_ymd_and_hms(2026, 3, 1, 12, 0, 0).unwrap());
         let mut manager = Manager::new(
             "manager-1".to_string(),
             "Test".to_string(),
@@ -113,7 +137,7 @@ mod tests {
     }
 
     fn make_game_with_employed_staff() -> Game {
-        let clock = GameClock::new(Utc.with_ymd_and_hms(2026, 8, 1, 12, 0, 0).unwrap());
+        let clock = GameClock::new(Utc.with_ymd_and_hms(2026, 3, 1, 12, 0, 0).unwrap());
         let mut manager = Manager::new(
             "manager-1".to_string(),
             "Test".to_string(),
@@ -151,6 +175,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(staff.team_id.as_deref(), Some("team-1"));
+        assert_eq!(team.finance, 188_000);
         assert_eq!(team.season_expenses, 12_000);
 
         let stored_game = state.get_game(|game| game.clone()).expect("stored game");
@@ -165,7 +190,32 @@ mod tests {
             .find(|team| team.id == "team-1")
             .expect("stored team should exist");
         assert_eq!(stored_staff.team_id.as_deref(), Some("team-1"));
+        assert_eq!(stored_team.finance, 188_000);
         assert_eq!(stored_team.season_expenses, 12_000);
+    }
+
+    #[test]
+    fn hire_staff_is_blocked_outside_hiring_window() {
+        let state = StateManager::new();
+        let mut game = make_game();
+        game.clock.current_date = Utc.with_ymd_and_hms(2026, 7, 1, 12, 0, 0).unwrap();
+        state.set_game(game);
+
+        let err = hire_staff_internal(&state, "staff-1").expect_err("should be blocked");
+        assert!(err.contains("winter to spring"));
+    }
+
+    #[test]
+    fn hire_staff_fails_when_finance_is_too_low() {
+        let state = StateManager::new();
+        let mut game = make_game();
+        if let Some(team) = game.teams.iter_mut().find(|team| team.id == "team-1") {
+            team.finance = 8_000;
+        }
+        state.set_game(game);
+
+        let err = hire_staff_internal(&state, "staff-1").expect_err("should fail");
+        assert_eq!(err, "Insufficient club funds to hire this staff member");
     }
 
     #[test]

@@ -84,12 +84,9 @@ function createTeam(overrides: Partial<TeamData> = {}): TeamData {
       scouting: 1,
     },
     starting_xi_ids: [],
-    match_roles: {
+    team_roles: {
       captain: null,
-      vice_captain: null,
-      penalty_taker: null,
-      free_kick_taker: null,
-      corner_taker: null,
+      shotcaller: null,
     },
     form: [],
     history: [],
@@ -196,6 +193,9 @@ describe("TransferBidModal", () => {
         teams={[createTeam(), createTeam({ id: "team-2", name: "Seller FC" })]}
         bidAmount="1500000"
         onBidAmountChange={vi.fn()}
+        destination="main"
+        onDestinationChange={vi.fn()}
+        academyTeam={null}
         myTeam={createTeam()}
         bidFee={1500000}
         bidProjection={createProjection()}
@@ -236,6 +236,9 @@ describe("TransferBidModal", () => {
         teams={[createTeam(), createTeam({ id: "team-2", name: "Seller FC" })]}
         bidAmount="1000000"
         onBidAmountChange={onBidAmountChange}
+        destination="main"
+        onDestinationChange={vi.fn()}
+        academyTeam={null}
         myTeam={createTeam()}
         bidFee={1000000}
         bidProjection={createProjection()}

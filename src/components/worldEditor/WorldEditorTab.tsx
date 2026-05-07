@@ -3,12 +3,15 @@ import type { ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ArrowLeft, Database, FileSpreadsheet, Image, Plus, Save, Search, Trash2, Upload, User, UserCog } from "lucide-react";
 import type { PlayerData, StaffData, TeamData } from "../../store/gameStore";
+import { calcAge } from "../../lib/helpers";
 import { calculateLolOvr } from "../../lib/lolPlayerStats";
 import { resolvePlayerPhoto, resolveStaffPhoto } from "../../lib/playerPhotos";
 import { Card, CardBody, ThemeToggle } from "../ui";
 
 type EditorMode = "players" | "staff";
 type PlayerListScope = "all" | "main" | "academy" | "freeAgents";
+
+const WORLD_EDITOR_REFERENCE_DATE = "2026-07-01T00:00:00Z";
 
 type ExcelImportField = PlayerAttributeKey | "potential_base";
 
@@ -52,35 +55,35 @@ function splitExcelRow(row: string): string[] {
 type PlayerAttributeKey = keyof PlayerData["attributes"];
 
 const LOL_PLAYER_STATS: Array<{ label: string; key: PlayerAttributeKey }> = [
-  { label: "Mechanics", key: "dribbling" },
-  { label: "Laning", key: "shooting" },
-  { label: "Teamfighting", key: "teamwork" },
-  { label: "Macro", key: "vision" },
-  { label: "Consistency", key: "decisions" },
-  { label: "Shotcalling", key: "leadership" },
-  { label: "Champion Pool", key: "agility" },
-  { label: "Discipline", key: "composure" },
-  { label: "Mental Resilience", key: "stamina" },
+  { label: "Mechanics", key: "mechanics" },
+  { label: "Laning", key: "laning" },
+  { label: "Teamfighting", key: "teamfighting" },
+  { label: "Macro", key: "macro_play" },
+  { label: "Consistency", key: "consistency" },
+  { label: "Shotcalling", key: "shotcalling" },
+  { label: "Champion Pool", key: "champion_pool" },
+  { label: "Discipline", key: "discipline" },
+  { label: "Mental Resilience", key: "mental_resilience" },
 ];
 
 const EXCEL_PLAYER_IMPORT_HEADERS: Record<string, ExcelImportField> = {
-  mecanicas: "dribbling",
-  mechanics: "dribbling",
-  "laning/pathing": "shooting",
-  laning: "shooting",
-  pathing: "shooting",
-  teamfight: "teamwork",
-  teamfighting: "teamwork",
-  macro: "vision",
-  consistencia: "decisions",
-  consistency: "decisions",
-  shotcalling: "leadership",
-  versatilidad: "agility",
-  versatility: "agility",
-  disciplina: "composure",
-  discipline: "composure",
-  mentalidad: "stamina",
-  mentality: "stamina",
+  mecanicas: "mechanics",
+  mechanics: "mechanics",
+  "laning/pathing": "laning",
+  laning: "laning",
+  pathing: "laning",
+  teamfight: "teamfighting",
+  teamfighting: "teamfighting",
+  macro: "macro_play",
+  consistencia: "consistency",
+  consistency: "consistency",
+  shotcalling: "shotcalling",
+  versatilidad: "champion_pool",
+  versatility: "champion_pool",
+  disciplina: "discipline",
+  discipline: "discipline",
+  mentalidad: "mental_resilience",
+  mentality: "mental_resilience",
   potencial: "potential_base",
   potential: "potential_base",
 };
@@ -122,13 +125,8 @@ function normalizeOptionalUrl(value: string): string | null {
 }
 
 function getAgeFromDob(dateOfBirth: string): number {
-  const birth = new Date(`${dateOfBirth}T00:00:00`);
-  if (Number.isNaN(birth.getTime())) return 24;
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const birthdayPassed = today.getMonth() > birth.getMonth()
-    || (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
-  if (!birthdayPassed) age -= 1;
+  const age = calcAge(dateOfBirth, WORLD_EDITOR_REFERENCE_DATE);
+  if (!Number.isFinite(age)) return 24;
   return Math.max(16, Math.min(45, age));
 }
 
@@ -163,21 +161,21 @@ function uniqueId(prefix: string): string {
 function defaultPlayerAttributes(value: number): PlayerData["attributes"] {
   return {
     pace: value,
-    stamina: value,
+    mental_resilience: value,
     strength: value,
-    agility: value,
+    champion_pool: value,
     passing: value,
-    shooting: value,
+    laning: value,
     tackling: value,
-    dribbling: value,
+    mechanics: value,
     defending: value,
     positioning: value,
-    vision: value,
-    decisions: value,
-    composure: value,
+    macro_play: value,
+    consistency: value,
+    discipline: value,
     aggression: value,
-    teamwork: value,
-    leadership: value,
+    teamfighting: value,
+    shotcalling: value,
     handling: 20,
     reflexes: 20,
     aerial: 50,
@@ -479,13 +477,16 @@ export default function WorldEditorTab({ onBack }: WorldEditorTabProps) {
         if (!update) return player;
         updated += 1;
         const { potential_base, ...attributeUpdates } = update;
+        const safeAttributeUpdates = Object.fromEntries(
+          Object.entries(attributeUpdates).filter(([, value]) => typeof value === "number"),
+        ) as Partial<PlayerData["attributes"]>;
         const nextPlayer = {
           ...player,
           attributes: {
             ...player.attributes,
-            ...attributeUpdates,
-          },
-        };
+            ...safeAttributeUpdates,
+          } as PlayerData["attributes"],
+        } satisfies PlayerData;
         const nextOvr = calculateLolOvr(nextPlayer);
         return {
           ...nextPlayer,

@@ -14,7 +14,10 @@ import StaffTab from "../staff/StaffTab";
 import InboxTab from "../inbox/InboxTab";
 import ManagerTab from "../manager/ManagerTab";
 import NewsTab from "../news/NewsTab";
+import SocialTab from "../social/SocialTab";
 import ChampionsTab from "../champions/ChampionsTab";
+import ChampionsWorldTab from "../world/ChampionsWorldTab";
+import ScrimsTab from "../scrims/ScrimsTab";
 import EndOfSeasonScreen from "../EndOfSeasonScreen";
 import { Card, CardBody } from "../ui";
 import type { DashboardTabContentModel } from "./dashboardTabContentModel";
@@ -38,6 +41,7 @@ export default function DashboardTabContent({
       onNavigate,
       onSelectPlayer,
       onSelectTeam,
+      onViewChampion,
     },
   } = viewModel;
 
@@ -78,8 +82,12 @@ export default function DashboardTabContent({
         <TrainingTab gameState={gameState} onGameUpdate={onGameUpdate} />
       )}
 
-      {activeTab === "Champions" && (
-        <ChampionsTab gameState={gameState} onGameUpdate={onGameUpdate} />
+      {activeTab === "Scrims" && (
+        <ScrimsTab gameState={gameState} onGameUpdate={onGameUpdate} />
+      )}
+
+      {activeTab === "Meta" && (
+        <ChampionsTab gameState={gameState} onGameUpdate={onGameUpdate} onViewChampion={onViewChampion} />
       )}
 
       {activeTab === "Schedule" && (
@@ -119,6 +127,10 @@ export default function DashboardTabContent({
         <TournamentsTab gameState={gameState} onSelectTeam={onSelectTeam} />
       )}
 
+      {activeTab === "ChampionsWorld" && (
+        <ChampionsWorldTab champions={gameState.champions} onViewChampion={onViewChampion} />
+      )}
+
       {activeTab === "Staff" && (
         <StaffTab gameState={gameState} onGameUpdate={onGameUpdate} />
       )}
@@ -155,18 +167,24 @@ export default function DashboardTabContent({
         <NewsTab gameState={gameState} onSelectTeam={onSelectTeam} />
       )}
 
+      {activeTab === "Social" && (
+        <SocialTab gameState={gameState} onGameUpdate={onGameUpdate} />
+      )}
+
       {![
         "Home",
         "Squad",
         "Tactics",
         "Training",
-        "Champions",
+        "Scrims",
+        "Meta",
         "Schedule",
         "Finances",
         "Transfers",
         "Players",
         "Teams",
         "Tournaments",
+        "ChampionsWorld",
         "Staff",
         "Scouting",
         "Youth",
@@ -174,6 +192,7 @@ export default function DashboardTabContent({
         "Inbox",
         "Manager",
         "News",
+        "Social",
       ].includes(activeTab) && (
         <Card>
           <CardBody>

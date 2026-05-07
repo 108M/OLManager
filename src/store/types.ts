@@ -30,16 +30,14 @@ export interface TeamSeasonRecord {
   won: number;
   drawn: number;
   lost: number;
-  goals_for: number;
-  goals_against: number;
+  kills_for: number;
+  kills_against: number;
+  points?: number;
 }
 
-export interface TeamMatchRolesData {
+export interface TeamRolesData {
   captain: string | null;
-  vice_captain: string | null;
-  penalty_taker: string | null;
-  free_kick_taker: string | null;
-  corner_taker: string | null;
+  shotcaller: string | null;
 }
 
 export type TeamKind = "Main" | "Academy";
@@ -139,8 +137,8 @@ export interface TeamData {
   short_name: string;
   country: string;
   city: string;
-  stadium_name: string;
-  stadium_capacity: number;
+  stadium_name?: string;
+  stadium_capacity?: number;
   finance: number;
   manager_id: string | null;
   reputation: number;
@@ -156,17 +154,26 @@ export interface TeamData {
   training_intensity: string;
   training_schedule: string;
   weekly_scrim_opponent_ids?: string[];
+  weekly_scrim_plan_team_ids?: string[][];
+  scrim_weekly_objective?: ScrimFocus | null;
+  scrim_weekly_slots?: number;
+  scrim_reputation?: number;
+  scrim_weekly_cancellations?: number;
   scrim_loss_streak?: number;
   scrim_weekly_played?: number;
   scrim_weekly_wins?: number;
   scrim_weekly_losses?: number;
   scrim_slot_results?: ScrimSlotResultData[];
+  scrim_reports?: ScrimReportData[];
   founded_year: number;
   colors: TeamColors;
   facilities?: FacilitiesData;
   sponsorship?: SponsorshipData | null;
-  starting_xi_ids: string[];
-  match_roles?: TeamMatchRolesData;
+  /** Preferred LoL terminology. Serialized by current saves/API responses. */
+  active_lineup_ids?: string[];
+  /** @deprecated Compatibility for older saves/API payloads. Use active_lineup_ids. */
+  starting_xi_ids?: string[];
+  team_roles?: TeamRolesData;
   form: string[];
   history: TeamSeasonRecord[];
   team_kind?: TeamKind;
@@ -175,11 +182,16 @@ export interface TeamData {
   academy?: AcademyMetadataData | null;
 }
 
+export function resolveActiveLineupIds(team: Pick<TeamData, "active_lineup_ids" | "starting_xi_ids">): string[] {
+  return team.active_lineup_ids ?? team.starting_xi_ids ?? [];
+}
+
 export type MatchOutcome = "Win" | "Loss";
 
 export type TeamSide = "Blue" | "Red";
 
-export type LolRole = "Top" | "Jungle" | "Mid" | "ADC" | "Support";
+export type LegacyFootballRole = "Goalkeeper" | "Defender" | "Midfielder" | "Forward" | "UNKNOWN";
+export type LolRole = "TOP" | "JUNGLE" | "MID" | "ADC" | "SUPPORT" | LegacyFootballRole;
 
 export type MatchEndReason = "NexusDestroyed" | "Surrender";
 
@@ -292,42 +304,25 @@ export interface CareerEntry {
   assists: number;
 }
 
+export type PlayerAttributes = Record<string, number>;
+
 export interface PlayerData {
   id: string;
   match_name: string;
   full_name: string;
   date_of_birth: string;
   nationality: string;
-  football_nation?: string;
+  nationality_code?: string;
+  competitive_region?: string;
   birth_country?: string | null;
   profile_image_url?: string | null;
-  position: string;
-  natural_position: string;
-  alternate_positions: string[];
+  position: LolRole;
+  natural_position: LolRole;
+  alternate_positions: LolRole[];
   footedness?: string;
   weak_foot?: number;
   training_focus: string | null;
-  attributes: {
-    pace: number;
-    stamina: number;
-    strength: number;
-    agility: number;
-    passing: number;
-    shooting: number;
-    tackling: number;
-    dribbling: number;
-    defending: number;
-    positioning: number;
-    vision: number;
-    decisions: number;
-    composure: number;
-    aggression: number;
-    teamwork: number;
-    leadership: number;
-    handling: number;
-    reflexes: number;
-    aerial: number;
-  };
+  attributes: PlayerAttributes;
   condition: number;
   morale: number;
   injury: null | { name: string; days_remaining: number };
@@ -341,6 +336,8 @@ export interface PlayerData {
   loan_listed: boolean;
   transfer_offers: TransferOfferData[];
   traits: string[];
+  /** @deprecated Compatibility for old world editor forms. Use competitive_region/nationality_code. */
+  football_nation?: string;
   potential_base?: number;
   potential_revealed?: number | null;
   potential_research_started_on?: string | null;
@@ -356,6 +353,35 @@ export interface ScrimSlotResultData {
   opponent_team_id: string;
   won: boolean;
   simulated_on: string;
+}
+
+export type ScrimStatus = "Pending" | "Accepted" | "Rejected" | "Cancelled" | "Played";
+export type ScrimFocus = "DraftPrep" | "ChampionPool" | "EarlyGame" | "Teamfighting" | "Macro" | "Mental";
+export type ScrimIssue = "DraftGap" | "LanePressure" | "ObjectiveSetup" | "TeamfightExecution" | "ChampionComfort" | "Tilt";
+export type PostScrimDecision = "ContinuePlan" | "VodReview" | "MentalReset" | "TargetedDrills" | "PushThrough" | "DayOff";
+
+export interface ScrimChampionPickData {
+  player_id: string;
+  champion_id: string;
+  role: string;
+}
+
+export interface ScrimReportData {
+  date: string;
+  week_key: string;
+  slot_index: number;
+  weekday: number;
+  team_id: string;
+  opponent_team_id: string;
+  status: ScrimStatus;
+  won: boolean | null;
+  focus: ScrimFocus;
+  issue: ScrimIssue | null;
+  severity: number;
+  quality: number;
+  player_champion_picks: ScrimChampionPickData[];
+  post_decision: PostScrimDecision | null;
+  created_on: string;
 }
 
 export interface ChampionMasteryEntryData {
@@ -389,9 +415,24 @@ export interface ChampionPatchStateData {
   rng_seed?: number;
 }
 
+/**
+ * Champion data from the backend - represents a League of Legends champion
+ */
+export interface ChampionData {
+  id: number;
+  name: string;
+  champion_key: string;
+  roles_json: string;
+  counterpicks_json: string | null;
+  synergies_json: string | null;
+  image_tile_url: string | null;
+  image_splash_url: string | null;
+}
+
 export interface TransferOfferData {
   id: string;
   from_team_id: string;
+  destination_team_id?: string | null;
   fee: number;
   wage_offered: number;
   last_manager_fee: number | null;
@@ -519,8 +560,10 @@ export interface MessageData {
 
 export interface ManagerCareerStats {
   matches_managed: number;
+  /** @deprecated Legacy test fixture alias. Use matches_managed. */
+  matches?: number;
   wins: number;
-  draws: number;
+  draws?: number;
   losses: number;
   trophies: number;
   best_finish: number | null;
@@ -594,9 +637,33 @@ export interface StandingData {
   won: number;
   drawn: number;
   lost: number;
-  goals_for: number;
-  goals_against: number;
+  kills_for?: number;
+  kills_against?: number;
+  /** @deprecated Compatibility alias while old fixture tests are migrated. Use kills_for. */
+  goals_for?: number;
+  /** @deprecated Compatibility alias while old fixture tests are migrated. Use kills_against. */
+  goals_against?: number;
   points: number;
+}
+
+export function getStandingKillsFor(standing: StandingData): number {
+  return standing.kills_for ?? standing.goals_for ?? 0;
+}
+
+export function getStandingKillsAgainst(standing: StandingData): number {
+  return standing.kills_against ?? standing.goals_against ?? 0;
+}
+
+export function getStandingKillDiff(standing: StandingData): number {
+  return getStandingKillsFor(standing) - getStandingKillsAgainst(standing);
+}
+
+export function compareStandingsByLolScore(left: StandingData, right: StandingData): number {
+  return (
+    right.points - left.points ||
+    getStandingKillDiff(right) - getStandingKillDiff(left) ||
+    getStandingKillsFor(right) - getStandingKillsFor(left)
+  );
 }
 
 export interface LeagueData {
@@ -610,6 +677,7 @@ export interface LeagueData {
 export type SeasonPhase = "Preseason" | "InSeason" | "PostSeason";
 
 export type TransferWindowStatus = "Closed" | "Open" | "DeadlineDay";
+export type DayPhase = "Morning" | "ScrimBlock" | "ReviewBlock" | "TrainingBlock" | "Evening";
 
 export interface TransferWindowContextData {
   status: TransferWindowStatus;
@@ -651,6 +719,75 @@ export interface NewsArticle {
   i18n_params?: Record<string, string>;
 }
 
+export type SocialAuthorType =
+  | "Team"
+  | "Player"
+  | "Fan"
+  | "Analyst"
+  | "Journalist"
+  | "MemeAccount"
+  | "Manager";
+
+export type SocialSentiment =
+  | "Hype"
+  | "Calm"
+  | "Worried"
+  | "Angry"
+  | "Meltdown"
+  | "Copium";
+
+export type SocialPostCategory =
+  | "MatchResult"
+  | "Banter"
+  | "PlayerReaction"
+  | "FanOpinion"
+  | "MediaTake"
+  | "Meme"
+  | "ManagerPost";
+
+export interface SocialPostData {
+  id: string;
+  date: string;
+  author_name: string;
+  author_handle: string;
+  author_type: SocialAuthorType;
+  body: string;
+  likes: number;
+  reposts: number;
+  replies: number;
+  sentiment: SocialSentiment;
+  category: SocialPostCategory;
+  tags: string[];
+  team_ids: string[];
+  player_ids: string[];
+  fixture_id: string | null;
+  media_url?: string | null;
+  read: boolean;
+}
+
+export interface SocialAccountData {
+  id: string;
+  language: string;
+  display_name: string;
+  handle: string;
+  author_type: SocialAuthorType;
+  profile_image_url?: string | null;
+  favorite_team_ids: string[];
+  active: boolean;
+}
+
+export interface SocialTemplateData {
+  id: string;
+  language: string;
+  slot: string;
+  author_id?: string | null;
+  conditions_json: string;
+  variants: string[];
+  tags: string[];
+  weight: number;
+  active: boolean;
+}
+
 export interface BoardObjective {
   id: string;
   description: string;
@@ -671,9 +808,10 @@ export interface GameStateData {
     current_date: string;
     start_date: string;
   };
+  day_phase?: DayPhase;
   manager: {
     id: string;
-    nickname?: string;
+    nickname?: string | null;
     first_name: string;
     last_name: string;
     date_of_birth: string;
@@ -691,6 +829,9 @@ export interface GameStateData {
   staff: StaffData[];
   messages: MessageData[];
   news: NewsArticle[];
+  social_posts?: SocialPostData[];
+  social_accounts?: SocialAccountData[];
+  social_templates?: SocialTemplateData[];
   league: LeagueData | null;
   academy_league?: LeagueData | null;
   scouting_assignments: ScoutingAssignment[];
@@ -698,4 +839,5 @@ export interface GameStateData {
   season_context?: SeasonContextData;
   champion_masteries?: ChampionMasteryEntryData[];
   champion_patch?: ChampionPatchStateData;
+  champions?: ChampionData[];
 }

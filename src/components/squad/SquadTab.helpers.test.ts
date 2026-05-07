@@ -3,22 +3,20 @@ import type { PlayerData } from "../../store/gameStore";
 import {
   applyLineupDrop,
   applyLineupSwap,
+  buildActiveLineupIds,
+  buildActiveLineupSlots,
   buildActivePositionMap,
-  buildPitchRows,
-  buildPitchSlotRows,
-  buildStartingXIIds,
-  getPitchSlotWidth,
   getPreferredPositions,
   isPlayerOutOfPosition,
+  LOL_ACTIVE_ROLES,
   normalisePosition,
-  parseFormationSlots,
   positionCode,
   translatePositionAbbreviation,
 } from "./SquadTab.helpers";
 
 const makePlayer = (
   id: string,
-  position: string,
+  position: PlayerData["position"],
   overrides: Partial<PlayerData> = {},
 ): PlayerData => ({
   id,
@@ -77,11 +75,12 @@ const makePlayer = (
 });
 
 describe("SquadTab helpers", () => {
-  it("normalises detailed positions into core roles", () => {
-    expect(normalisePosition("Center Back")).toBe("Defender");
-    expect(normalisePosition("Winger")).toBe("Forward");
-    expect(normalisePosition("Striker")).toBe("Forward");
-    expect(normalisePosition("Goalkeeper")).toBe("Goalkeeper");
+  it("normalises LoL roles without football grouping", () => {
+    expect(normalisePosition("TOP")).toBe("TOP");
+    expect(normalisePosition("JUNGLE")).toBe("JUNGLE");
+    expect(normalisePosition("MID")).toBe("MID");
+    expect(normalisePosition("ADC")).toBe("ADC");
+    expect(normalisePosition("SUPPORT")).toBe("SUPPORT");
   });
 
   it("handles missing or empty positions without crashing", () => {
@@ -89,227 +88,106 @@ describe("SquadTab helpers", () => {
     expect(positionCode(undefined)).toBe("");
   });
 
-  it("builds a full eleven-player starting XI when enough players exist", () => {
+  it("builds exactly five active LoL role ids when coverage exists", () => {
     const available = [
-      makePlayer("gk", "Goalkeeper"),
-      makePlayer("d1", "Defender"),
-      makePlayer("d2", "Defender"),
-      makePlayer("d3", "Defender"),
-      makePlayer("d4", "Defender"),
-      makePlayer("m1", "Midfielder"),
-      makePlayer("m2", "Midfielder"),
-      makePlayer("m3", "Midfielder"),
-      makePlayer("m4", "Midfielder"),
-      makePlayer("f1", "Forward"),
-      makePlayer("f2", "Forward"),
-      makePlayer("bench", "Forward"),
+      makePlayer("top", "TOP"),
+      makePlayer("jng", "JUNGLE"),
+      makePlayer("mid", "MID"),
+      makePlayer("adc", "ADC"),
+      makePlayer("sup", "SUPPORT"),
+      makePlayer("bench", "ADC"),
     ];
 
-    const ids = buildStartingXIIds(
-      available,
-      ["gk", "d1", "d2", "d3", "d4", "m1", "m2", "m3", "m4", "f1", "f2"],
-      "4-4-2",
+    const ids = buildActiveLineupIds(available, ["top", "jng", "mid", "adc", "sup", "bench"]);
+
+    expect(ids).toHaveLength(5);
+    expect(ids).toEqual(["top", "jng", "mid", "adc", "sup"]);
+  });
+
+  it("builds five active role slots and makes missing coverage explicit", () => {
+    const players = [
+      makePlayer("top", "TOP"),
+      makePlayer("jng", "JUNGLE"),
+      makePlayer("mid", "MID"),
+      makePlayer("adc", "ADC"),
+    ];
+    const slots = buildActiveLineupSlots(
+      LOL_ACTIVE_ROLES,
+      buildActiveLineupIds(players, []),
+      new Map(players.map((player) => [player.id, player])),
     );
 
-    expect(ids).toHaveLength(11);
-    expect(ids).toEqual(["gk", "d1", "d2", "d3", "d4", "m1", "m2", "m3", "m4", "f1", "f2"]);
+    expect(slots.map((slot) => slot.role)).toEqual(["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"]);
+    expect(slots).toHaveLength(5);
+    expect(slots.find((slot) => slot.role === "SUPPORT")?.player).toBeNull();
   });
 
   it("builds preferred positions using normalised natural and alternate roles", () => {
-    const player = makePlayer("p1", "Center Back", {
-      natural_position: "Center Back",
-      alternate_positions: ["Right Wing Back", "Defensive Midfielder"],
+    const player = makePlayer("p1", "TOP", {
+      natural_position: "TOP",
+      alternate_positions: ["JUNGLE", "SUPPORT"],
     });
 
-    expect(getPreferredPositions(player)).toEqual([
-      "CenterBack",
-      "RightWingBack",
-      "DefensiveMidfielder",
-    ]);
+    expect(getPreferredPositions(player)).toEqual(["TOP", "JUNGLE", "SUPPORT"]);
   });
 
-  it("detects out-of-position status using normalised roles", () => {
-    const defender = makePlayer("p1", "Center Back", {
-      natural_position: "Center Back",
-      alternate_positions: ["Right Wing Back"],
+  it("detects out-of-position status using LoL roles", () => {
+    const player = makePlayer("p1", "TOP", {
+      natural_position: "TOP",
+      alternate_positions: ["JUNGLE"],
     });
 
-    expect(isPlayerOutOfPosition(defender, "Defender")).toBe(false);
-    expect(isPlayerOutOfPosition(defender, "Midfielder")).toBe(true);
+    expect(isPlayerOutOfPosition(player, "TOP")).toBe(false);
+    expect(isPlayerOutOfPosition(player, "JUNGLE")).toBe(false);
+    expect(isPlayerOutOfPosition(player, "ADC")).toBe(true);
   });
 
-  it("parses 4-part formations correctly", () => {
-    expect(parseFormationSlots("4-2-3-1")).toEqual({ def: 4, mid: 5, fwd: 1 });
-  });
-
-  it("builds five pitch rows for 4-part formations", () => {
-    const rows = buildPitchRows("4-2-3-1");
-    expect(rows.map((row) => row.label)).toEqual(["GK", "DEF", "DM", "AM", "FWD"]);
-    expect(rows[1].positions).toHaveLength(4);
-    expect(rows[2].positions).toHaveLength(2);
-    expect(rows[3].positions).toHaveLength(3);
-    expect(rows[4].positions).toHaveLength(1);
-    expect(rows[1].positions).toEqual([
-      "LeftBack",
-      "CenterBack",
-      "CenterBack",
-      "RightBack",
-    ]);
-  });
-
-  it("keeps wide side-specific roles in left-to-right pitch order across formations", () => {
-    expect(buildPitchRows("4-4-2")[2].positions).toEqual([
-      "LeftMidfielder",
-      "CentralMidfielder",
-      "CentralMidfielder",
-      "RightMidfielder",
-    ]);
-    expect(buildPitchRows("5-3-2")[1].positions).toEqual([
-      "LeftWingBack",
-      "CenterBack",
-      "CenterBack",
-      "CenterBack",
-      "RightWingBack",
-    ]);
-    expect(buildPitchRows("4-2-3-1")[3].positions).toEqual([
-      "LeftMidfielder",
-      "AttackingMidfielder",
-      "RightMidfielder",
-    ]);
-    expect(buildPitchRows("4-3-3")[3].positions).toEqual([
-      "LeftWinger",
-      "Striker",
-      "RightWinger",
-    ]);
-  });
-
-  it("returns compact pitch widths for crowded rows", () => {
-    expect(getPitchSlotWidth(5)).toBeLessThan(getPitchSlotWidth(3));
-    expect(getPitchSlotWidth(1)).toBeGreaterThan(getPitchSlotWidth(4));
-  });
-
-  it("prefers persisted starting XI ids when enough valid players remain", () => {
+  it("prefers persisted active lineup ids by matching LoL roles", () => {
     const available = [
-      makePlayer("gk", "Goalkeeper"),
-      makePlayer("d1", "Defender"),
-      makePlayer("d2", "Defender"),
-      makePlayer("d3", "Defender"),
-      makePlayer("d4", "Defender"),
-      makePlayer("m1", "Midfielder"),
-      makePlayer("m2", "Midfielder"),
-      makePlayer("m3", "Midfielder"),
-      makePlayer("m4", "Midfielder"),
-      makePlayer("f1", "Forward"),
-      makePlayer("f2", "Forward"),
-      makePlayer("b1", "Forward"),
+      makePlayer("top-a", "TOP"),
+      makePlayer("top-b", "TOP"),
+      makePlayer("jng", "JUNGLE"),
+      makePlayer("mid", "MID"),
+      makePlayer("adc", "ADC"),
+      makePlayer("sup", "SUPPORT"),
     ];
 
-    const ids = buildStartingXIIds(
-      available,
-      ["gk", "d1", "d2", "d3", "d4", "m1", "m2", "m3", "m4", "f1", "f2"],
-      "4-4-2",
-    );
+    const ids = buildActiveLineupIds(available, ["top-b", "jng", "mid", "adc", "sup"]);
 
-    expect(ids).toEqual(["gk", "d1", "d2", "d3", "d4", "m1", "m2", "m3", "m4", "f1", "f2"]);
+    expect(ids).toEqual(["top-b", "jng", "mid", "adc", "sup"]);
   });
 
-  it("auto-selects players by formation role when persisted ids are missing", () => {
+  it("auto-selects one player per LoL role when persisted ids are missing", () => {
     const available = [
-      makePlayer("gk", "Goalkeeper"),
-      makePlayer("d1", "Defender"),
-      makePlayer("d2", "Defender"),
-      makePlayer("d3", "Defender"),
-      makePlayer("d4", "Defender"),
-      makePlayer("m1", "Midfielder"),
-      makePlayer("m2", "Midfielder"),
-      makePlayer("m3", "Midfielder"),
-      makePlayer("m4", "Midfielder"),
-      makePlayer("f1", "Forward"),
-      makePlayer("f2", "Forward"),
+      makePlayer("top", "TOP"),
+      makePlayer("jng", "JUNGLE"),
+      makePlayer("mid", "MID"),
+      makePlayer("adc", "ADC"),
+      makePlayer("sup", "SUPPORT"),
+      makePlayer("adc-bench", "ADC"),
     ];
 
-    const ids = buildStartingXIIds(available, [], "4-4-2");
+    const ids = buildActiveLineupIds(available, []);
 
-    expect(ids).toHaveLength(11);
-    expect(ids).toContain("gk");
-    expect(ids).toEqual(expect.arrayContaining(["d1", "d2", "d3", "d4"]));
+    expect(ids).toHaveLength(5);
+    expect(ids).toEqual(["top", "jng", "mid", "adc", "sup"]);
   });
 
-  it("builds pitch slot rows and active position map from xi ids", () => {
+  it("builds active position map from active role slots", () => {
     const players = [
-      makePlayer("gk", "Goalkeeper"),
-      makePlayer("d1", "LeftBack"),
-      makePlayer("d2", "CenterBack"),
-      makePlayer("d3", "CenterBack"),
-      makePlayer("d4", "RightBack"),
-      makePlayer("m1", "LeftMidfielder"),
-      makePlayer("m2", "CentralMidfielder"),
-      makePlayer("m3", "CentralMidfielder"),
-      makePlayer("m4", "RightMidfielder"),
-      makePlayer("f1", "Striker"),
-      makePlayer("f2", "Striker"),
+      makePlayer("top", "TOP"),
+      makePlayer("jng", "JUNGLE"),
+      makePlayer("mid", "MID"),
+      makePlayer("adc", "ADC"),
+      makePlayer("sup", "SUPPORT"),
     ];
-    const xiIds = players.map((player) => player.id);
-    const rows = buildPitchRows("4-4-2");
-    const slotRows = buildPitchSlotRows(rows, xiIds, new Map(players.map((p) => [p.id, p])));
-    const activeMap = buildActivePositionMap(slotRows);
+    const slots = buildActiveLineupSlots(LOL_ACTIVE_ROLES, players.map((player) => player.id), new Map(players.map((p) => [p.id, p])));
+    const activeMap = buildActivePositionMap(slots);
 
-    expect(slotRows[0].slots[0].player?.id).toBe("gk");
-    expect(activeMap.get("d1")).toBe("LeftBack");
-    expect(activeMap.get("m1")).toBe("LeftMidfielder");
-    expect(activeMap.get("f2")).toBe("Striker");
-  });
-
-  it("preserves saved xi order for side-specific wide roles", () => {
-    const available = [
-      makePlayer("gk", "Goalkeeper"),
-      makePlayer("rb", "RightBack", {
-        natural_position: "RightBack",
-        footedness: "Right",
-        weak_foot: 1,
-      }),
-      makePlayer("cb1", "CenterBack"),
-      makePlayer("cb2", "CenterBack"),
-      makePlayer("lb", "LeftBack", {
-        natural_position: "LeftBack",
-        footedness: "Left",
-        weak_foot: 1,
-      }),
-      makePlayer("rm", "RightMidfielder", {
-        natural_position: "RightMidfielder",
-        footedness: "Right",
-        weak_foot: 1,
-      }),
-      makePlayer("cm1", "CentralMidfielder"),
-      makePlayer("cm2", "CentralMidfielder"),
-      makePlayer("lm", "LeftMidfielder", {
-        natural_position: "LeftMidfielder",
-        footedness: "Left",
-        weak_foot: 1,
-      }),
-      makePlayer("st1", "Striker"),
-      makePlayer("st2", "Striker"),
-    ];
-
-    const ids = buildStartingXIIds(
-      available,
-      ["gk", "rb", "cb1", "cb2", "lb", "rm", "cm1", "cm2", "lm", "st1", "st2"],
-      "4-4-2",
-    );
-
-    expect(ids).toEqual([
-      "gk",
-      "rb",
-      "cb1",
-      "cb2",
-      "lb",
-      "rm",
-      "cm1",
-      "cm2",
-      "lm",
-      "st1",
-      "st2",
-    ]);
+    expect(slots[0].player?.id).toBe("top");
+    expect(activeMap.get("top")).toBe("TOP");
+    expect(activeMap.get("jng")).toBe("JUNGLE");
+    expect(activeMap.get("sup")).toBe("SUPPORT");
   });
 
   it("swaps XI players when dragging from one slot to another", () => {
@@ -353,18 +231,18 @@ describe("SquadTab helpers", () => {
   });
 
   it("returns core position codes", () => {
-    expect(positionCode("Center Back")).toBe("CB");
-    expect(positionCode("Striker")).toBe("ST");
+    expect(positionCode("TOP")).toBe("TOP");
+    expect(positionCode("SUPPORT")).toBe("SUP");
   });
 
   it("translates normalized position abbreviations with fallback codes", () => {
     const translate = (key: string): string => key;
 
-    expect(translatePositionAbbreviation(translate, "Center Back")).toBe(
-      "common.posAbbr.CenterBack",
+    expect(translatePositionAbbreviation(translate, "TOP")).toBe(
+      "common.posAbbr.TOP",
     );
-    expect(translatePositionAbbreviation(translate, "Striker")).toBe(
-      "common.posAbbr.Striker",
+    expect(translatePositionAbbreviation(translate, "SUPPORT")).toBe(
+      "common.posAbbr.SUPPORT",
     );
   });
 });

@@ -17,6 +17,7 @@ import {
 } from "../../lib/helpers";
 import { useTranslation } from "react-i18next";
 import { calculateLolOvr } from "../../lib/lolPlayerStats";
+import { getAllCountryNames } from "../../lib/countries";
 import { resolvePlayerPhoto } from "../../lib/playerPhotos";
 import {
   getLolRoleForPlayer,
@@ -29,7 +30,7 @@ interface PlayersListTabProps {
   onSelectTeam: (id: string) => void;
 }
 
-type SortKey = "photo" | "name" | "position" | "age" | "ovr" | "value" | "team";
+type SortKey = "name" | "position" | "age" | "ovr" | "value" | "team" | "status" | "nationality";
 
 function normalizeNick(value: string): string {
   return value
@@ -94,10 +95,13 @@ export default function PlayersListTab({
   let filtered = dedupedPlayers.filter((p) => {
     if (search.length >= 2) {
       const q = search.toLowerCase();
+      const matchesNationality =
+        p.nationality.toLowerCase().includes(q) ||
+        [...getAllCountryNames(p.nationality)].some((name) => name.includes(q));
       if (
         !p.full_name.toLowerCase().includes(q) &&
         !p.match_name.toLowerCase().includes(q) &&
-        !p.nationality.toLowerCase().includes(q)
+        !matchesNationality
       )
         return false;
     }
@@ -119,10 +123,6 @@ export default function PlayersListTab({
   filtered.sort((a, b) => {
     let cmp = 0;
     switch (sortKey) {
-      case "photo":
-        // Photo column doesn't have a meaningful sort, fallback to name
-        cmp = a.match_name.localeCompare(b.match_name);
-        break;
       case "name":
         cmp = a.match_name.localeCompare(b.match_name);
         break;
@@ -130,7 +130,7 @@ export default function PlayersListTab({
         cmp = posOrder[getLolRoleForPlayer(a)] - posOrder[getLolRoleForPlayer(b)];
         break;
       case "age":
-        cmp = calcAge(a.date_of_birth) - calcAge(b.date_of_birth);
+        cmp = calcAge(a.date_of_birth, gameState.clock.current_date) - calcAge(b.date_of_birth, gameState.clock.current_date);
         break;
       case "ovr":
         cmp = calculateLolOvr(a) - calculateLolOvr(b);
@@ -142,6 +142,19 @@ export default function PlayersListTab({
         cmp = getTeamName(gameState.teams, a.team_id).localeCompare(
           getTeamName(gameState.teams, b.team_id),
         );
+        break;
+      case "status": {
+        const statusVal = (p: typeof a) => {
+          if (p.loan_listed) return 3;
+          if (p.transfer_listed) return 2;
+          if (p.injury) return 1;
+          return 0;
+        };
+        cmp = statusVal(b) - statusVal(a);
+        break;
+      }
+      case "nationality":
+        cmp = (a.nationality ?? "").localeCompare(b.nationality ?? "");
         break;
     }
     return sortAsc ? cmp : -cmp;
@@ -240,13 +253,7 @@ export default function PlayersListTab({
             <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-50 dark:bg-navy-800 border-b border-gray-200 dark:border-navy-600 text-xs">
-                    <SortHeader
-                      label=""
-                      sortKey="photo"
-                      current={sortKey}
-                      asc={sortAsc}
-                      onClick={handleSort}
-                    />
+                    <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 w-14"></th>
                     <SortHeader
                       label={t("common.position")}
                       sortKey="position"
@@ -268,9 +275,13 @@ export default function PlayersListTab({
                       asc={sortAsc}
                       onClick={handleSort}
                     />
-                    <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      {t("common.nationality")}
-                    </th>
+                    <SortHeader
+                      label={t("common.nationality")}
+                      sortKey="nationality"
+                      current={sortKey}
+                      asc={sortAsc}
+                      onClick={handleSort}
+                    />
                     <SortHeader
                       label={t("common.team")}
                       sortKey="team"
@@ -292,9 +303,13 @@ export default function PlayersListTab({
                       asc={sortAsc}
                       onClick={handleSort}
                     />
-                    <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      {t("common.status")}
-                    </th>
+                    <SortHeader
+                      label={t("common.status")}
+                      sortKey="status"
+                      current={sortKey}
+                      asc={sortAsc}
+                      onClick={handleSort}
+                    />
                   </tr>
                 </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
@@ -302,7 +317,7 @@ export default function PlayersListTab({
                   .slice((page - 1) * pageSize, page * pageSize)
                   .map((player) => {
                     const ovr = calculateLolOvr(player);
-                    const age = calcAge(player.date_of_birth);
+                    const age = calcAge(player.date_of_birth, gameState.clock.current_date);
                     const photoSrc = resolvePlayerPhoto(player.id, player.match_name);
                     return (
                       <tr

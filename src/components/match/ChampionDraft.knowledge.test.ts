@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  computeBanRecommendationScore,
+  calculateScrimDraftSignal,
   calculateStaffRevealBudget,
   selectRivalMasteryKnowledgeForPlayer,
   selectStaffRevealEntries,
 } from "./ChampionDraft";
+import type { ScrimReportData } from "../../store/gameStore";
 
 function champion(id: string, name: string) {
   return {
@@ -13,6 +16,27 @@ function champion(id: string, name: string) {
     image: `/${id}.png`,
     tags: [],
     roleHints: [],
+  };
+}
+
+function scrimReport(overrides: Partial<ScrimReportData>): ScrimReportData {
+  return {
+    date: "2026-04-28",
+    week_key: "2026-W18",
+    slot_index: 0,
+    weekday: 2,
+    team_id: "team-a",
+    opponent_team_id: "team-b",
+    status: "Played",
+    won: true,
+    focus: "DraftPrep",
+    issue: null,
+    severity: 0,
+    quality: 72,
+    player_champion_picks: [],
+    post_decision: null,
+    created_on: "2026-04-28T10:00:00Z",
+    ...overrides,
   };
 }
 
@@ -113,5 +137,119 @@ describe("ChampionDraft rival mastery knowledge", () => {
       champion: expect.objectContaining({ id: "kaisa" }),
       source: "scouting",
     });
+  });
+
+  it("turns recent scrim reports into comfort, preparation, and synergy draft signal", () => {
+    const signal = calculateScrimDraftSignal(
+      [
+        scrimReport({
+          player_champion_picks: [
+            { player_id: "p1", champion_id: "Azir", role: "Mid" },
+            { player_id: "p2", champion_id: "Sejuani", role: "Jungle" },
+            { player_id: "p3", champion_id: "KaiSa", role: "ADC" },
+          ],
+          post_decision: "VodReview",
+        }),
+      ],
+      "team-a",
+      "team-b",
+      [
+        { playerId: "p1", championId: "azir" },
+        { playerId: "p2", championId: "sejuani" },
+      ],
+    );
+
+    expect(signal.comfort).toBe(2);
+    expect(signal.preparation).toBe(2);
+    expect(signal.synergy).toBe(1);
+    expect(signal.reasons).toEqual([
+      "recent champion reps",
+      "scrimmed core together",
+      "recent prep vs this opponent",
+    ]);
+  });
+
+  it("prioritizes meta tier over mastery in ban recommendation scoring", () => {
+    const highMetaLowMastery = computeBanRecommendationScore({
+      enemyMastery: 62,
+      metaScore: 20,
+      tier: "S",
+      roleHints: ["MID"],
+      roleAlreadyCovered: false,
+      enemyJungleLocked: false,
+      isFlexThreat: false,
+      isSpecialThreat: false,
+      draftHashSeed: "seed-a",
+    });
+
+    const lowMetaHighMastery = computeBanRecommendationScore({
+      enemyMastery: 95,
+      metaScore: 7,
+      tier: "D",
+      roleHints: ["MID"],
+      roleAlreadyCovered: false,
+      enemyJungleLocked: false,
+      isFlexThreat: false,
+      isSpecialThreat: false,
+      draftHashSeed: "seed-b",
+    });
+
+    expect(highMetaLowMastery).toBeGreaterThan(lowMetaHighMastery);
+  });
+
+  it("applies signature exception for Tier D when mastery is extreme", () => {
+    const tierDNormal = computeBanRecommendationScore({
+      enemyMastery: 90,
+      metaScore: 7,
+      tier: "D",
+      roleHints: ["TOP"],
+      roleAlreadyCovered: false,
+      enemyJungleLocked: false,
+      isFlexThreat: false,
+      isSpecialThreat: false,
+      draftHashSeed: "seed-c",
+    });
+
+    const tierDSignature = computeBanRecommendationScore({
+      enemyMastery: 96,
+      metaScore: 7,
+      tier: "D",
+      roleHints: ["TOP"],
+      roleAlreadyCovered: false,
+      enemyJungleLocked: false,
+      isFlexThreat: false,
+      isSpecialThreat: false,
+      draftHashSeed: "seed-d",
+    });
+
+    expect(tierDSignature).toBeGreaterThan(tierDNormal);
+  });
+
+  it("deprioritizes jungle bans when enemy jungle is already locked and no flex threat", () => {
+    const forcedJungleBan = computeBanRecommendationScore({
+      enemyMastery: 85,
+      metaScore: 16,
+      tier: "A",
+      roleHints: ["JUNGLE"],
+      roleAlreadyCovered: false,
+      enemyJungleLocked: true,
+      isFlexThreat: false,
+      isSpecialThreat: false,
+      draftHashSeed: "seed-e",
+    });
+
+    const flexJungleThreat = computeBanRecommendationScore({
+      enemyMastery: 85,
+      metaScore: 16,
+      tier: "A",
+      roleHints: ["JUNGLE", "MID"],
+      roleAlreadyCovered: false,
+      enemyJungleLocked: true,
+      isFlexThreat: true,
+      isSpecialThreat: false,
+      draftHashSeed: "seed-f",
+    });
+
+    expect(flexJungleThreat).toBeGreaterThan(forcedJungleBan);
   });
 });

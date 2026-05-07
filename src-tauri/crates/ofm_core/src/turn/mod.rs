@@ -16,9 +16,10 @@ use crate::transfers;
 use chrono::Datelike;
 use domain::league::{Fixture, FixtureCompetition, FixtureStatus, League, MatchResult};
 use domain::message::{InboxMessage, MessageCategory, MessageContext, MessagePriority};
-use domain::player::Position as DomainPosition;
+use domain::player::LolRole as DomainLolRole;
 use domain::stats::StatsState;
 use domain::team::{Team, TeamKind, TeamSeasonRecord};
+use engine::LolRole as EngineLolRole;
 use log::{debug, info};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -107,6 +108,7 @@ where
 
     debug!("[turn] process_day {}: complete, advancing clock", today);
     game.clock.advance_days(1);
+    game.day_phase = crate::game::DayPhase::Morning;
     crate::season_context::refresh_game_context(game);
 }
 
@@ -139,6 +141,7 @@ pub fn finish_live_match_day(game: &mut Game) {
     champions::process_daily_champion_system(game);
 
     game.clock.advance_days(1);
+    game.day_phase = crate::game::DayPhase::Morning;
     crate::season_context::refresh_game_context(game);
 }
 
@@ -172,42 +175,24 @@ fn build_engine_team(game: &Game, team_id: &str) -> engine::TeamData {
         .players
         .iter()
         .filter(|p| p.team_id.as_deref() == Some(team_id))
-        .map(|p| {
-            let pos = match p.position.to_group_position() {
-                DomainPosition::Goalkeeper => engine::Position::Goalkeeper,
-                DomainPosition::Defender => engine::Position::Defender,
-                DomainPosition::Midfielder => engine::Position::Midfielder,
-                DomainPosition::Forward => engine::Position::Forward,
-                _ => engine::Position::Midfielder,
-            };
-            engine::PlayerData {
-                id: p.id.clone(),
-                name: p.match_name.clone(),
-                position: pos,
-                lol_role: Some(lol_role_from_position(&p.natural_position).to_string()),
-                condition: p.condition,
-                fitness: p.fitness,
-                pace: p.attributes.pace,
-                stamina: p.attributes.stamina,
-                strength: p.attributes.strength,
-                agility: p.attributes.agility,
-                passing: p.attributes.passing,
-                shooting: p.attributes.shooting,
-                tackling: p.attributes.tackling,
-                dribbling: p.attributes.dribbling,
-                defending: p.attributes.defending,
-                positioning: p.attributes.positioning,
-                vision: p.attributes.vision,
-                decisions: p.attributes.decisions,
-                composure: p.attributes.composure,
-                aggression: p.attributes.aggression,
-                teamwork: p.attributes.teamwork,
-                leadership: p.attributes.leadership,
-                handling: p.attributes.handling,
-                reflexes: p.attributes.reflexes,
-                aerial: p.attributes.aerial,
-                traits: p.traits.iter().map(|t| format!("{:?}", t)).collect(),
-            }
+        .map(|p| engine::PlayerData {
+            id: p.id.clone(),
+            name: p.match_name.clone(),
+            role: to_engine_role(p.natural_position),
+            condition: p.condition,
+            fitness: p.fitness,
+            // Map OLD domain fields to NEW LoL-native engine structure
+            // Physical+Technical+Mental -> LoL attributes (post-#204 alignment)
+            mechanics: p.attributes.mechanics,
+            laning: p.attributes.laning,
+            teamfighting: p.attributes.teamfighting,
+            macro_play: p.attributes.macro_play,
+            consistency: p.attributes.consistency,
+            shotcalling: p.attributes.shotcalling,
+            champion_pool: p.attributes.champion_pool,
+            discipline: p.attributes.discipline,
+            mental_resilience: p.attributes.mental_resilience,
+            traits: p.traits.iter().map(|t| format!("{:?}", t)).collect(),
         })
         .collect();
 
@@ -222,16 +207,28 @@ fn build_engine_team(game: &Game, team_id: &str) -> engine::TeamData {
 
 fn academy_player_ovr(player: &domain::player::Player) -> u32 {
     let attrs = &player.attributes;
-    let total = u32::from(attrs.dribbling)
-        + u32::from(attrs.shooting)
-        + u32::from(attrs.teamwork)
-        + u32::from(attrs.vision)
-        + u32::from(attrs.decisions)
-        + u32::from(attrs.leadership)
-        + u32::from(attrs.agility)
-        + u32::from(attrs.composure)
-        + u32::from(attrs.stamina);
+    let total = u32::from(attrs.mechanics)
+        + u32::from(attrs.laning)
+        + u32::from(attrs.teamfighting)
+        + u32::from(attrs.macro_play)
+        + u32::from(attrs.consistency)
+        + u32::from(attrs.shotcalling)
+        + u32::from(attrs.champion_pool)
+        + u32::from(attrs.discipline)
+        + u32::from(attrs.mental_resilience);
     (total + 4) / 9
+}
+
+/// Convert domain::player::LolRole to engine::LolRole
+fn to_engine_role(role: DomainLolRole) -> EngineLolRole {
+    match role {
+        DomainLolRole::Top => EngineLolRole::Top,
+        DomainLolRole::Jungle => EngineLolRole::Jungle,
+        DomainLolRole::Mid => EngineLolRole::Mid,
+        DomainLolRole::Adc => EngineLolRole::Adc,
+        DomainLolRole::Support => EngineLolRole::Support,
+        DomainLolRole::Unknown => EngineLolRole::Top,
+    }
 }
 
 fn maybe_push_weekly_academy_report(game: &mut Game, today: &str) {
@@ -292,17 +289,17 @@ fn maybe_push_weekly_academy_report(game: &mut Game, today: &str) {
                     won: 0,
                     drawn: 0,
                     lost: 0,
-                    goals_for: 0,
-                    goals_against: 0,
+                    kills_for: 0,
+                    kills_against: 0,
                 });
             let points = record.won.saturating_mul(3).saturating_add(record.drawn);
-            let goal_diff = record.goals_for as i32 - record.goals_against as i32;
+            let goal_diff = record.kills_for as i32 - record.kills_against as i32;
             (
                 team.id.clone(),
                 team.name.clone(),
                 points,
                 goal_diff,
-                record.goals_for,
+                record.kills_for,
                 record.won,
                 record.lost,
             )
@@ -390,9 +387,9 @@ fn maybe_push_weekly_academy_report(game: &mut Game, today: &str) {
         .iter()
         .filter(|player| player.team_id.as_deref() == Some(parent_team.id.as_str()))
         .collect();
-    let mut main_best_by_role: HashMap<&'static str, u32> = HashMap::new();
+    let mut main_best_by_role: HashMap<EngineLolRole, u32> = HashMap::new();
     for player in main_players {
-        let role = lol_role_from_position(&player.natural_position);
+        let role = to_engine_role(player.natural_position);
         let ovr = academy_player_ovr(player);
         let entry = main_best_by_role.entry(role).or_insert(0);
         if ovr > *entry {
@@ -402,8 +399,8 @@ fn maybe_push_weekly_academy_report(game: &mut Game, today: &str) {
     let promotion_ready: Vec<String> = academy_players
         .iter()
         .filter_map(|player| {
-            let role = lol_role_from_position(&player.natural_position);
-            let main_ref = main_best_by_role.get(role).copied().unwrap_or(75);
+            let role = to_engine_role(player.natural_position);
+            let main_ref = main_best_by_role.get(&role).copied().unwrap_or(75);
             let academy_ovr = academy_player_ovr(player);
             (academy_ovr >= main_ref.saturating_sub(2)).then(|| player.match_name.clone())
         })
@@ -519,8 +516,8 @@ fn ensure_team_season_record(team: &mut Team, season: u32) -> &mut TeamSeasonRec
         won: 0,
         drawn: 0,
         lost: 0,
-        goals_for: 0,
-        goals_against: 0,
+        kills_for: 0,
+        kills_against: 0,
     });
     let last_index = team.history.len().saturating_sub(1);
     &mut team.history[last_index]
@@ -542,8 +539,8 @@ fn register_parallel_result(
 
     let record = ensure_team_season_record(team, season);
     record.played = record.played.saturating_add(1);
-    record.goals_for = record.goals_for.saturating_add(u32::from(scored));
-    record.goals_against = record.goals_against.saturating_add(u32::from(conceded));
+    record.kills_for = record.kills_for.saturating_add(u32::from(scored));
+    record.kills_against = record.kills_against.saturating_add(u32::from(conceded));
     if won_series {
         record.won = record.won.saturating_add(1);
     } else {
@@ -675,7 +672,13 @@ fn maybe_simulate_parallel_academy_leagues(game: &mut Game) {
     for (fixture_index, home_team_id, away_team_id) in fixtures_to_play {
         let home_data = build_engine_team(game, &home_team_id);
         let away_data = build_engine_team(game, &away_team_id);
-        let report = engine::simulate(&home_data, &away_data, &engine::MatchConfig::default());
+        let mut rng = rand::rng();
+        let report = engine::simulate_lol(
+            &home_data,
+            &away_data,
+            &engine::MatchConfig::default(),
+            &mut rng,
+        );
         simulated_results.push((
             fixture_index,
             home_team_id,
@@ -748,10 +751,10 @@ fn maybe_simulate_parallel_academy_leagues(game: &mut Game) {
                 b.points
                     .cmp(&a.points)
                     .then(
-                        (b.goals_for as i32 - b.goals_against as i32)
-                            .cmp(&(a.goals_for as i32 - a.goals_against as i32)),
+                        (b.kills_for as i32 - b.kills_against as i32)
+                            .cmp(&(a.kills_for as i32 - a.kills_against as i32)),
                     )
-                    .then(b.goals_for.cmp(&a.goals_for))
+                    .then(b.kills_for.cmp(&a.kills_for))
             });
             if sorted.len() >= 4 {
                 let next_matchday = league
@@ -1138,26 +1141,6 @@ fn next_winter_playoff_pairings(
     None
 }
 
-fn lol_role_from_position(position: &DomainPosition) -> &'static str {
-    match position {
-        DomainPosition::Defender
-        | DomainPosition::RightBack
-        | DomainPosition::CenterBack
-        | DomainPosition::LeftBack
-        | DomainPosition::RightWingBack
-        | DomainPosition::LeftWingBack => "TOP",
-        DomainPosition::AttackingMidfielder
-        | DomainPosition::RightMidfielder
-        | DomainPosition::LeftMidfielder => "MID",
-        DomainPosition::Forward
-        | DomainPosition::RightWinger
-        | DomainPosition::LeftWinger
-        | DomainPosition::Striker => "ADC",
-        DomainPosition::Goalkeeper | DomainPosition::DefensiveMidfielder => "SUPPORT",
-        DomainPosition::Midfielder | DomainPosition::CentralMidfielder => "JUNGLE",
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Matchday simulation using the engine crate
 // ---------------------------------------------------------------------------
@@ -1238,7 +1221,8 @@ where
     let away_data = build_engine_team(game, &away_team_id);
     let config = engine::MatchConfig::default();
     let report = if best_of <= 1 {
-        engine::simulate(&home_data, &away_data, &config)
+        let mut rng = rand::rng();
+        engine::simulate_lol(&home_data, &away_data, &config, &mut rng)
     } else {
         simulate_series(&home_data, &away_data, &config, best_of)
     };
@@ -1247,7 +1231,84 @@ where
         "[turn] match result: {} {} - {} {} (fixture #{})",
         home_name, report.home_wins, report.away_wins, away_name, idx
     );
+
+    let mastery_picks = auto_sim_mastery_picks(game, &home_team_id, &away_team_id);
+    let winner_team_id = if report.home_wins == report.away_wins {
+        if home_team_id <= away_team_id {
+            home_team_id.clone()
+        } else {
+            away_team_id.clone()
+        }
+    } else if report.home_wins > report.away_wins {
+        home_team_id.clone()
+    } else {
+        away_team_id.clone()
+    };
+    if !mastery_picks.is_empty() {
+        champions::apply_match_mastery_progress(game, &winner_team_id, &mastery_picks);
+    }
+
     apply_match_report_with_capture(game, idx, &home_team_id, &away_team_id, &report, on_capture);
+}
+
+fn auto_sim_mastery_picks(
+    game: &Game,
+    home_team_id: &str,
+    away_team_id: &str,
+) -> Vec<(String, String)> {
+    let mut picks: Vec<(String, String)> = Vec::new();
+
+    for team_id in [home_team_id, away_team_id] {
+        let mut player_ids = game
+            .teams
+            .iter()
+            .find(|team| team.id == *team_id)
+            .map(|team| team.active_lineup_ids.clone())
+            .unwrap_or_default();
+
+        if player_ids.len() < 5 {
+            let mut fallback_ids: Vec<String> = game
+                .players
+                .iter()
+                .filter(|player| player.team_id.as_deref() == Some(team_id))
+                .map(|player| player.id.clone())
+                .collect();
+            fallback_ids.sort();
+            for player_id in fallback_ids {
+                if !player_ids.contains(&player_id) {
+                    player_ids.push(player_id);
+                }
+                if player_ids.len() >= 5 {
+                    break;
+                }
+            }
+        }
+
+        for player_id in player_ids.into_iter().take(5) {
+            let champion_id = game
+                .players
+                .iter()
+                .find(|player| player.id == player_id)
+                .and_then(|player| {
+                    champions::training_targets_for_player(player)
+                        .into_iter()
+                        .find(|target| !target.trim().is_empty())
+                })
+                .or_else(|| {
+                    game.champion_masteries
+                        .iter()
+                        .filter(|entry| entry.player_id == player_id)
+                        .max_by_key(|entry| entry.mastery)
+                        .map(|entry| entry.champion_id.clone())
+                });
+
+            if let Some(champion_id) = champion_id {
+                picks.push((player_id, champion_id));
+            }
+        }
+    }
+
+    picks
 }
 
 fn simulate_series(
@@ -1256,22 +1317,23 @@ fn simulate_series(
     config: &engine::MatchConfig,
     best_of: u8,
 ) -> engine::MatchReport {
+    let mut rng = rand::rng();
     let target_wins = (best_of / 2) + 1;
     let mut home_wins = 0_u8;
     let mut away_wins = 0_u8;
     let mut reports: Vec<engine::MatchReport> = Vec::new();
 
     while home_wins < target_wins && away_wins < target_wins {
-        let report = engine::simulate(home_data, away_data, config);
+        let report = engine::simulate_lol(home_data, away_data, config, &mut rng);
         home_wins = home_wins.saturating_add(report.home_wins);
         away_wins = away_wins.saturating_add(report.away_wins);
         reports.push(report);
     }
 
-    let mut merged = reports
-        .last()
-        .cloned()
-        .unwrap_or_else(|| engine::simulate(home_data, away_data, config));
+    let mut merged = match reports.last() {
+        Some(report) => report.clone(),
+        None => engine::simulate_lol(home_data, away_data, config, &mut rng),
+    };
     merged.home_wins = home_wins;
     merged.away_wins = away_wins;
 

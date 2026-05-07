@@ -3,7 +3,8 @@ use domain::league::{
     Fixture, FixtureCompetition, FixtureStatus, League, MatchResult, StandingEntry,
 };
 use domain::manager::Manager;
-use domain::player::{Player, PlayerAttributes, PlayerSeasonStats, Position};
+use domain::player::{Player, PlayerAttributes, PlayerSeasonStats};
+use domain::stats::LolRole;
 use domain::team::{FinancialTransactionKind, Team, TeamKind};
 use ofm_core::clock::GameClock;
 use ofm_core::end_of_season::{is_season_complete, process_end_of_season};
@@ -25,24 +26,24 @@ fn make_team(id: &str, name: &str) -> Team {
     )
 }
 
-fn make_player(id: &str, name: &str, team_id: &str, pos: Position) -> Player {
+fn make_player(id: &str, name: &str, team_id: &str, pos: LolRole) -> Player {
     let attrs = PlayerAttributes {
         pace: 65,
-        stamina: 65,
+        mental_resilience: 65,
         strength: 65,
-        agility: 65,
+        champion_pool: 65,
         passing: 65,
-        shooting: 65,
+        laning: 65,
         tackling: 65,
-        dribbling: 65,
+        mechanics: 65,
         defending: 65,
         positioning: 65,
-        vision: 65,
-        decisions: 65,
-        composure: 65,
+        macro_play: 65,
+        consistency: 65,
+        discipline: 65,
         aggression: 50,
-        teamwork: 65,
-        leadership: 50,
+        teamfighting: 65,
+        shotcalling: 50,
         handling: 20,
         reflexes: 30,
         aerial: 60,
@@ -96,8 +97,8 @@ fn make_standing(
         won,
         drawn,
         lost,
-        goals_for: gf,
-        goals_against: ga,
+        kills_for: gf,
+        kills_against: ga,
         points: won * 3 + drawn,
     }
 }
@@ -119,29 +120,25 @@ fn make_completed_season_game() -> Game {
     let team1 = make_team("team1", "Test FC");
     let team2 = make_team("team2", "Rival FC");
 
-    let mut p1 = make_player("p1", "Star", "team1", Position::Forward);
+    let mut p1 = make_player("p1", "Star", "team1", LolRole::Adc);
     p1.stats = PlayerSeasonStats {
         appearances: 30,
-        goals: 20,
+        kills: 20,
         assists: 10,
         clean_sheets: 0,
         avg_rating: 7.5,
         minutes_played: 2700,
-        yellow_cards: 3,
-        red_cards: 0,
         ..PlayerSeasonStats::default()
     };
 
-    let mut p2 = make_player("p2", "Rival", "team2", Position::Forward);
+    let mut p2 = make_player("p2", "Rival", "team2", LolRole::Adc);
     p2.stats = PlayerSeasonStats {
         appearances: 28,
-        goals: 15,
+        kills: 15,
         assists: 8,
         clean_sheets: 0,
         avg_rating: 7.0,
         minutes_played: 2500,
-        yellow_cards: 1,
-        red_cards: 0,
         ..PlayerSeasonStats::default()
     };
 
@@ -300,8 +297,8 @@ fn summary_has_correct_user_position() {
 fn summary_has_correct_goals() {
     let mut game = make_completed_season_game();
     let summary = process_end_of_season(&mut game);
-    assert_eq!(summary.user_goals_for, 3);
-    assert_eq!(summary.user_goals_against, 1);
+    assert_eq!(summary.user_kills_for, 3);
+    assert_eq!(summary.user_kills_against, 1);
 }
 
 #[test]
@@ -378,7 +375,7 @@ fn player_stats_reset() {
 
     let p1 = game.players.iter().find(|p| p.id == "p1").unwrap();
     assert_eq!(p1.stats.appearances, 0);
-    assert_eq!(p1.stats.goals, 0);
+    assert_eq!(p1.stats.kills, 0);
     assert_eq!(p1.stats.assists, 0);
 }
 
@@ -386,7 +383,7 @@ fn player_stats_reset() {
 fn player_with_zero_appearances_no_career_entry() {
     let mut game = make_completed_season_game();
     // Add a player with 0 appearances
-    let p3 = make_player("p3", "Bench", "team1", Position::Defender);
+    let p3 = make_player("p3", "Bench", "team1", LolRole::Top);
     game.players.push(p3);
 
     process_end_of_season(&mut game);
@@ -409,7 +406,6 @@ fn manager_career_stats_updated() {
 
     assert_eq!(game.manager.career_stats.matches_managed, 2);
     assert_eq!(game.manager.career_stats.wins, 2);
-    assert_eq!(game.manager.career_stats.draws, 0);
     assert_eq!(game.manager.career_stats.losses, 0);
 }
 
@@ -671,6 +667,14 @@ fn champion_receives_prize_money_and_ledger_entry() {
     let team1 = game.teams.iter().find(|team| team.id == "team1").unwrap();
     assert_eq!(team1.finance, initial_finance + 800_000);
     assert_eq!(team1.season_income, 800_000);
+    assert_eq!(
+        team1.wage_budget,
+        ((team1.finance as f64) * 0.06).round() as i64
+    );
+    assert_eq!(
+        team1.transfer_budget,
+        ((team1.finance as f64) * 0.22).round() as i64
+    );
     assert_eq!(team1.financial_ledger.len(), 1);
     assert_eq!(
         team1.financial_ledger[0].kind,

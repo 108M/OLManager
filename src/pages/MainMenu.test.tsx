@@ -372,4 +372,13 @@ describe("MainMenu", () => {
       );
     });
   });
+
+  it("displays LoL-neutral logo without OpenFoot/OpenFootball branding", () => {
+    render(<MainMenu />);
+
+    const logo = screen.getByRole("img", { name: /league manager/i });
+    expect(logo).toBeInTheDocument();
+    expect(logo).toHaveAttribute("src", "/openfootlogo.svg");
+    expect(logo).toHaveAccessibleName("League Manager");
+  });
 });

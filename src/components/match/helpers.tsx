@@ -200,6 +200,26 @@ export function phaseLabel(phase: string): string {
   switch (phase) {
     case "PreGame":
       return "Draft";
+    case "PreKickOff":
+      return "Pre-Match";
+    case "FirstHalf":
+      return "1st Half";
+    case "HalfTime":
+      return "Half Time";
+    case "SecondHalf":
+      return "2nd Half";
+    case "FullTime":
+      return "Full Time";
+    case "ExtraTimeFirstHalf":
+      return "ET 1st Half";
+    case "ExtraTimeHalfTime":
+      return "ET Half Time";
+    case "ExtraTimeSecondHalf":
+      return "ET 2nd Half";
+    case "ExtraTimeEnd":
+      return "ET End";
+    case "PenaltyShootout":
+      return "Penalties";
     case "Live":
       return "Live";
     case "Finished":
@@ -210,9 +230,21 @@ export function phaseLabel(phase: string): string {
 }
 
 export function calcOvr(attrs: Record<string, number>): number {
-  const vals = Object.values(attrs);
-  if (vals.length === 0) return 0;
-  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+  // Use the 9 visible LoL stats (same as calculate_lol_ovr in Rust)
+  const stats = [
+    attrs.mechanics,
+    attrs.laning,
+    attrs.teamfighting,
+    attrs.macro_play,
+    attrs.consistency,
+    attrs.shotcalling,
+    attrs.champion_pool,
+    attrs.discipline,
+    attrs.mental_resilience,
+  ];
+  const valid = stats.filter((v) => v != null);
+  if (valid.length === 0) return 0;
+  return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
 }
 
 export function resolveMatchFixture(

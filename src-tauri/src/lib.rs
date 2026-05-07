@@ -1,5 +1,6 @@
 mod application;
 mod commands;
+pub mod error;
 use commands::*;
 
 use application::lol_sim_v2::LolSimV2StoreState;
@@ -22,10 +23,11 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
-                .level_for("openfootmanager_lib", log::LevelFilter::Debug)
+                .level_for("olmanager_lib", log::LevelFilter::Debug)
                 .level_for("ofm_core", log::LevelFilter::Debug)
                 .level_for("engine", log::LevelFilter::Debug)
                 .level_for("db", log::LevelFilter::Debug)
@@ -111,16 +113,28 @@ pub fn run() {
             delegate_renewals,
             preview_renewal_financial_impact,
             set_formation,
+            set_active_lineup,
             set_starting_xi,
             set_play_style,
             set_lol_tactics,
-            set_team_match_roles,
+            set_team_roles,
             set_training,
             set_training_schedule,
             set_training_groups,
             set_weekly_scrims,
+            set_weekly_scrim_plans,
+            set_weekly_scrim_slots,
+            set_weekly_scrim_objective,
+            finalize_weekly_scrim_setup,
+            auto_configure_weekly_scrim_setup,
+            get_scrim_context,
+            cancel_todays_scrims,
+            choose_post_scrim_decision,
+            choose_daily_scrim_action,
+            delegate_scrim_decision,
             set_player_training_focus,
             set_player_champion_training_target,
+            delegate_champion_training,
             start_potential_research,
             reroll_player_lol_role,
             hire_staff,
@@ -131,7 +145,7 @@ pub fn run() {
             mark_all_messages_read,
             clear_old_messages,
             save_game,
-            auto_select_set_pieces,
+            auto_select_team_roles,
             toggle_transfer_list,
             toggle_loan_list,
             make_transfer_bid,
@@ -163,6 +177,13 @@ pub fn run() {
             exit_to_menu,
             get_settings,
             save_settings,
+            get_social_feed,
+            create_manager_social_post,
+            get_social_accounts,
+            save_social_accounts,
+            get_social_templates,
+            save_social_templates,
+            relocalize_social_feed,
             clear_all_saves,
             get_available_jobs,
             apply_for_job,
@@ -174,7 +195,12 @@ pub fn run() {
             lol_sim_v2_skip_to_end,
             save_manager_avatar,
             load_manager_avatar,
-            update_manager_profile
+            update_manager_profile,
+            get_champions,
+            get_champion_by_id,
+            seed_champions_from_json,
+            get_champion_stats,
+            get_top_champions
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

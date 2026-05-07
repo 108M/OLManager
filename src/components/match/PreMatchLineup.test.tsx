@@ -29,27 +29,18 @@ vi.mock("react-i18next", () => ({
 const makePlayer = (overrides: Partial<EnginePlayerData> = {}): EnginePlayerData => ({
   id: "p1",
   name: "Test",
-  position: "Midfielder",
+  role: "Midfielder",
   condition: 100,
-  pace: 70,
-  stamina: 70,
-  strength: 70,
-  agility: 70,
-  passing: 70,
-  shooting: 70,
-  tackling: 70,
-  dribbling: 70,
-  defending: 70,
-  positioning: 70,
-  vision: 70,
-  decisions: 70,
-  composure: 70,
-  aggression: 50,
-  teamwork: 70,
-  leadership: 50,
-  handling: 70,
-  reflexes: 70,
-  aerial: 70,
+  fitness: 75,
+  mechanics: 70,
+  laning: 70,
+  teamfighting: 70,
+  macro_play: 70,
+  consistency: 70,
+  shotcalling: 50,
+  champion_pool: 70,
+  discipline: 70,
+  mental_resilience: 70,
   traits: [],
   ...overrides,
 });
@@ -60,40 +51,35 @@ const makeTeam = (overrides: Partial<EngineTeamData> = {}): EngineTeamData => ({
   formation: "4-4-2",
   play_style: "Balanced",
   players: [
-    makePlayer({ id: "top", name: "Top One", position: "Defender" }),
-    makePlayer({ id: "jg", name: "Jg One", position: "Midfielder" }),
-    makePlayer({ id: "mid", name: "Mid One", position: "AttackingMidfielder" }),
-    makePlayer({ id: "adc", name: "Adc One", position: "Forward" }),
-    makePlayer({ id: "sup", name: "Sup One", position: "DefensiveMidfielder" }),
+    makePlayer({ id: "top", name: "Top One", role: "Top" }),
+    makePlayer({ id: "jg", name: "Jg One", role: "Jungle" }),
+    makePlayer({ id: "mid", name: "Mid One", role: "Mid" }),
+    makePlayer({ id: "adc", name: "Adc One", role: "Adc" }),
+    makePlayer({ id: "sup", name: "Sup One", role: "Support" }),
   ],
   ...overrides,
 });
 
 describe("PreMatchLineup helpers", () => {
-  it("maps domain positions into LoL roles", () => {
-    expect(getPlayerLolRole(makePlayer({ position: "Defender" }))).toBe("TOP");
-    expect(getPlayerLolRole(makePlayer({ position: "Midfielder" }))).toBe("JUNGLE");
-    expect(getPlayerLolRole(makePlayer({ position: "AttackingMidfielder" }))).toBe("MID");
-    expect(getPlayerLolRole(makePlayer({ position: "Forward" }))).toBe("ADC");
-    expect(getPlayerLolRole(makePlayer({ position: "Goalkeeper" }))).toBe("SUPPORT");
-  });
-
-  it("prefers explicit lol_role when provided", () => {
-    expect(getPlayerLolRole(makePlayer({ position: "Defender", lol_role: "ADC" }))).toBe("ADC");
-    expect(getPlayerLolRole(makePlayer({ position: "Forward", lol_role: "JG" }))).toBe("JUNGLE");
+  it("maps engine roles into LoL roles", () => {
+    expect(getPlayerLolRole(makePlayer({ role: "Top" }))).toBe("TOP");
+    expect(getPlayerLolRole(makePlayer({ role: "Jungle" }))).toBe("JUNGLE");
+    expect(getPlayerLolRole(makePlayer({ role: "Mid" }))).toBe("MID");
+    expect(getPlayerLolRole(makePlayer({ role: "Adc" }))).toBe("ADC");
+    expect(getPlayerLolRole(makePlayer({ role: "Support" }))).toBe("SUPPORT");
   });
 
   it("computes LoL OVR from visible 9 stats", () => {
     const player = makePlayer({
-      dribbling: 80,
-      shooting: 70,
-      teamwork: 75,
-      vision: 65,
-      decisions: 60,
-      leadership: 70,
-      agility: 68,
-      composure: 72,
-      stamina: 74,
+      mechanics: 80,
+      laning: 70,
+      teamfighting: 75,
+      macro_play: 65,
+      consistency: 60,
+      shotcalling: 70,
+      champion_pool: 68,
+      discipline: 72,
+      mental_resilience: 74,
     });
     expect(getPositionOvr(player)).toBe(Math.round((80 + 70 + 75 + 65 + 60 + 70 + 68 + 72 + 74) / 9));
   });
@@ -113,11 +99,13 @@ describe("PreMatchLineup helpers", () => {
 });
 
 describe("PreMatchLineup component", () => {
+  const homeTeam = makeTeam();
+  const awayTeam = makeTeam({ id: "away", name: "Rival United" });
   const defaultProps = {
-    userTeam: makeTeam(),
-    userBench: [makePlayer({ id: "b1", name: "Bench One", position: "Forward", condition: 90 })],
-    oppTeam: makeTeam({ id: "opp", name: "Rival United" }),
-    userColor: "#00ff00",
+    homeTeam,
+    homeBench: [makePlayer({ id: "b1", name: "Bench One", role: "Top", condition: 90 })],
+    awayTeam,
+    awayBench: [makePlayer({ id: "ab1", name: "Away Bench", role: "Mid", condition: 85 })],
     homeTeamColor: "#ff0000",
     awayTeamColor: "#0000ff",
     userSide: "Home" as const,
@@ -128,17 +116,21 @@ describe("PreMatchLineup component", () => {
     onAutoSelect: vi.fn(),
   };
 
-  it("renders 5 LoL starters and bench", () => {
+  it("renders both teams' 5 LoL starters and bench", () => {
     render(<PreMatchLineup {...defaultProps} />);
+    // Home team players
     expect(screen.getAllByText("Top One").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Jg One").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Mid One").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Adc One").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Sup One").length).toBeGreaterThan(0);
+    // Home bench
     expect(screen.getByText("Bench One")).toBeInTheDocument();
+    // Away bench
+    expect(screen.getByText("Away Bench")).toBeInTheDocument();
   });
 
-  it("calls callbacks for auto-select, starter select and swap", () => {
+  it("calls callbacks for auto-select, starter select and swap on user side", () => {
     const onAutoSelect = vi.fn();
     const onSelectStarter = vi.fn();
     const onSwap = vi.fn();

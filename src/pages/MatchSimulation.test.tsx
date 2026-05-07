@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 import MatchSimulation from "./MatchSimulation";
 
+const liveWinnerQueue = vi.hoisted(() => [] as Array<"blue" | "red">);
 const navigateMock = vi.fn();
 const setGameStateMock = vi.fn();
 let locationState: unknown = null;
@@ -112,9 +113,30 @@ vi.mock("../components/match/LolMatchLive", () => ({
     onFullTime,
   }: {
     snapshot: { home_team: { name: string } };
-    onFullTime?: () => void;
+    onFullTime?: (state?: unknown) => void;
   }) => (
-    <button data-testid="match-live" onClick={onFullTime}>
+    <button
+      data-testid="match-live"
+      onClick={() =>
+        onFullTime?.({
+          timeSec: 1800,
+          running: false,
+          winner: liveWinnerQueue.shift() ?? "blue",
+          showWalls: false,
+          champions: [],
+          minions: [],
+          structures: [],
+          objectives: {},
+          neutralTimers: {},
+          stats: {
+            blue: { kills: 1, towers: 0, dragons: 0, barons: 0, gold: 0 },
+            red: { kills: 0, towers: 0, dragons: 0, barons: 0, gold: 0 },
+          },
+          events: [],
+          speed: 1,
+        } as never)
+      }
+    >
       {snapshot.home_team.name}
     </button>
   ),
@@ -148,25 +170,68 @@ vi.mock("../components/match/DraftResultScreen", () => ({
     onContinue,
     onPressConference,
     result,
+    seriesGames,
+    seriesLength = 1,
+    seriesGameIndex = 1,
+    userSeriesWins,
+    opponentSeriesWins,
   }: {
     onContinue?: () => void;
     onPressConference?: () => void;
-    result?: unknown;
-  }) => (
-    <div>
-      <div data-testid="postmatch-round-summary">
-        {result ? JSON.stringify(result) : "null"}
-      </div>
-      {onPressConference ? (
-        <button data-testid="postmatch-press" onClick={onPressConference}>
-          Press Conference
+    result?: { winnerSide?: "blue" | "red" };
+    seriesGames?: Array<{ gameIndex: number; winnerSide?: "blue" | "red"; result?: { winnerSide?: "blue" | "red" } }>;
+    seriesLength?: 1 | 3 | 5;
+    seriesGameIndex?: number;
+    userSeriesWins?: number;
+    opponentSeriesWins?: number;
+  }) => {
+    const games = Array.isArray(seriesGames) && seriesGames.length > 0
+      ? seriesGames
+      : [{ gameIndex: Math.max(1, seriesGameIndex), winnerSide: result?.winnerSide, result }];
+    const targetWins = seriesLength === 1 ? 1 : seriesLength === 3 ? 2 : 3;
+    const winsFromGames = games.reduce(
+      (score, entry) => {
+        const winnerSide = entry.winnerSide ?? entry.result?.winnerSide;
+        if (winnerSide === "blue") return { ...score, user: score.user + 1 };
+        if (winnerSide === "red") return { ...score, opponent: score.opponent + 1 };
+        return score;
+      },
+      { user: 0, opponent: 0 },
+    );
+    const propWins = (userSeriesWins ?? 0) + (opponentSeriesWins ?? 0);
+    const gameWins = winsFromGames.user + winsFromGames.opponent;
+    const propsClaimFinished = (userSeriesWins ?? 0) >= targetWins || (opponentSeriesWins ?? 0) >= targetWins;
+    const propsSupportedByGames = propsClaimFinished && propWins <= seriesLength && gameWins >= propWins;
+    const useGameScore = seriesLength > 1 && gameWins > 0 && (propWins === 0 || !propsSupportedByGames);
+    const displayUserWins = useGameScore ? winsFromGames.user : (userSeriesWins ?? 0);
+    const displayOpponentWins = useGameScore ? winsFromGames.opponent : (opponentSeriesWins ?? 0);
+    const displayedWins = displayUserWins + displayOpponentWins;
+    const isSeriesFinished =
+      seriesLength <= 1 ||
+      ((displayUserWins >= targetWins || displayOpponentWins >= targetWins) && gameWins >= displayedWins);
+    const playedGames = Math.max(...games.map((entry) => entry.gameIndex), games.length, 1);
+
+    return (
+      <div>
+        <div data-testid="postmatch-round-summary">
+          {result ? JSON.stringify(result) : "null"}
+        </div>
+        <div data-testid="series-score">
+          {displayUserWins}-{displayOpponentWins}
+        </div>
+        {onPressConference ? (
+          <button data-testid="postmatch-press" onClick={onPressConference}>
+            Press Conference
+          </button>
+        ) : null}
+        <button data-testid="postmatch-finish" onClick={() => onContinue?.()}>
+          {seriesLength > 1 && !isSeriesFinished
+            ? `Game ${Math.min(seriesLength, playedGames + 1)}/${seriesLength}`
+            : "Finish Match"}
         </button>
-      ) : null}
-      <button data-testid="postmatch-finish" onClick={onContinue}>
-        Finish Match
-      </button>
-    </div>
-  ),
+      </div>
+    );
+  },
 }));
 
 vi.mock("../components/match/PressConference", () => ({
@@ -239,17 +304,13 @@ function makeSnapshot(
     home_subs_made: 0,
     away_subs_made: 0,
     max_subs: 5,
-    home_set_pieces: {
-      free_kick_taker: null,
-      corner_taker: null,
-      penalty_taker: null,
+    home_roles: {
       captain: null,
+      shotcaller: null,
     },
-    away_set_pieces: {
-      free_kick_taker: null,
-      corner_taker: null,
-      penalty_taker: null,
+    away_roles: {
       captain: null,
+      shotcaller: null,
     },
     substitutions: [],
     allows_extra_time: false,
@@ -350,6 +411,76 @@ function makeGameState(): Record<string, unknown> {
   };
 }
 
+function makeGameStateWithSeriesFixture(
+  fixture: Partial<Record<string, unknown>> = {},
+): Record<string, unknown> {
+  const gameState = makeGameState();
+  gameState.league = {
+    id: "league-1",
+    name: "Test League",
+    season: 1,
+    fixtures: [
+      {
+        id: "fixture-series-1",
+        matchday: 12,
+        date: "2026-08-01",
+        home_team_id: "home1",
+        away_team_id: "away1",
+        competition: "Playoffs",
+        best_of: 3,
+        status: "InProgress",
+        result: {
+          home_wins: 0,
+          away_wins: 0,
+        },
+        ...fixture,
+      },
+    ],
+    standings: [],
+  };
+
+  return gameState;
+}
+
+async function playOneDraftMap(): Promise<void> {
+  if (screen.queryByTestId("prematch-start")) {
+    fireEvent.click(screen.getByTestId("prematch-start"));
+  }
+
+  await waitFor(function (): void {
+    expect(screen.getByTestId("champion-draft")).toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByTestId("champion-draft"));
+  await waitFor(function (): void {
+    expect(screen.getByTestId("tactics-stage")).toBeInTheDocument();
+  });
+  fireEvent.click(screen.getByTestId("tactics-continue"));
+
+  await waitFor(function (): void {
+    expect(screen.getByTestId("match-live")).toBeInTheDocument();
+  });
+  fireEvent.click(screen.getByTestId("match-live"));
+
+  await waitFor(function (): void {
+    expect(screen.getByTestId("postmatch-finish")).toBeInTheDocument();
+  });
+}
+
+async function advanceFromPrematchToDraft(): Promise<void> {
+  if (screen.queryByTestId("champion-draft")) {
+    return;
+  }
+
+  await waitFor(function (): void {
+    expect(screen.getByTestId("prematch-start")).toBeInTheDocument();
+  });
+  fireEvent.click(screen.getByTestId("prematch-start"));
+  await waitFor(function (): void {
+    expect(screen.getByTestId("champion-draft")).toBeInTheDocument();
+  });
+}
+
 describe("MatchSimulation", function (): void {
   beforeEach(function resetState(): void {
     mockedInvoke.mockReset();
@@ -362,6 +493,7 @@ describe("MatchSimulation", function (): void {
     };
     localStorage.clear();
     sessionStorage.clear();
+    liveWinnerQueue.length = 0;
   });
 
   it("renders the current live snapshot when get_match_snapshot succeeds", async function (): Promise<void> {
@@ -429,9 +561,7 @@ describe("MatchSimulation", function (): void {
 
     render(<MatchSimulation />);
 
-    await waitFor(function (): void {
-      expect(screen.getByTestId("champion-draft")).toBeInTheDocument();
-    });
+    await advanceFromPrematchToDraft();
 
     fireEvent.click(screen.getByTestId("champion-draft"));
 
@@ -457,9 +587,7 @@ describe("MatchSimulation", function (): void {
 
     fireEvent.click(screen.getByTestId("prematch-start"));
 
-    await waitFor(function (): void {
-      expect(screen.getByTestId("champion-draft")).toBeInTheDocument();
-    });
+    await advanceFromPrematchToDraft();
 
     fireEvent.click(screen.getByTestId("champion-draft"));
 
@@ -496,9 +624,7 @@ describe("MatchSimulation", function (): void {
 
     render(<MatchSimulation />);
 
-    await waitFor(function (): void {
-      expect(screen.getByTestId("champion-draft")).toBeInTheDocument();
-    });
+    await advanceFromPrematchToDraft();
 
     fireEvent.click(screen.getByTestId("champion-draft"));
     await waitFor(function (): void {
@@ -554,9 +680,7 @@ describe("MatchSimulation", function (): void {
 
     render(<MatchSimulation />);
 
-    await waitFor(function (): void {
-      expect(screen.getByTestId("champion-draft")).toBeInTheDocument();
-    });
+    await advanceFromPrematchToDraft();
 
     fireEvent.click(screen.getByTestId("champion-draft"));
     await waitFor(function (): void {
@@ -647,9 +771,7 @@ describe("MatchSimulation", function (): void {
 
     render(<MatchSimulation />);
 
-    await waitFor(function (): void {
-      expect(screen.getByTestId("champion-draft")).toBeInTheDocument();
-    });
+    await advanceFromPrematchToDraft();
 
     fireEvent.click(screen.getByTestId("champion-draft"));
     await waitFor(function (): void {
@@ -675,6 +797,128 @@ describe("MatchSimulation", function (): void {
       expect(parsed.seriesGames).toHaveLength(3);
       expect(parsed.seriesGames.map((entry: { gameIndex: number }) => entry.gameIndex)).toEqual([1, 2, 3]);
       expect(parsed.seriesGames[2].winnerSide).toBe(parsed.result.winnerSide);
+    });
+  });
+
+  it("completes a Bo3 after loss-win-win and does not request a fourth map", async function (): Promise<void> {
+    locationState = {
+      mode: "spectator",
+      snapshot: makeSnapshot(),
+    };
+
+    const gameStateWithBo3 = makeGameStateWithSeriesFixture({
+      id: "fixture-bo3-lww",
+      best_of: 3,
+    });
+    const finishedGameStateWithBo3 = JSON.parse(JSON.stringify(gameStateWithBo3)) as Record<string, unknown>;
+    const finishedLeague = finishedGameStateWithBo3.league as { fixtures: Array<Record<string, unknown>> };
+    finishedLeague.fixtures[0] = {
+      ...finishedLeague.fixtures[0],
+      status: "Finished",
+      result: { home_wins: 0, away_wins: 0 },
+    };
+    gameStoreState = {
+      gameState: gameStateWithBo3,
+      setGameState: setGameStateMock,
+    };
+    setGameStateMock.mockImplementation(function updateStore(nextGameState: Record<string, unknown>): void {
+      gameStoreState = {
+        gameState: nextGameState,
+        setGameState: setGameStateMock,
+      };
+    });
+    liveWinnerQueue.push("red", "blue", "blue");
+    mockedInvoke.mockImplementation(async function (command: string): Promise<unknown> {
+      if (command === "get_match_snapshot") return makeSnapshot();
+      if (command === "finish_live_match") {
+        return { game: finishedGameStateWithBo3, round_summary: null };
+      }
+      if (command === "apply_champion_mastery_from_draft") return gameStateWithBo3;
+      return null;
+    });
+
+    const view = render(<MatchSimulation />);
+
+    await playOneDraftMap();
+    expect(screen.getByTestId("series-score")).toHaveTextContent("0-1");
+    expect(screen.queryByTestId("postmatch-press")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("postmatch-finish"));
+
+    await playOneDraftMap();
+    expect(screen.getByTestId("series-score")).toHaveTextContent("1-1");
+    expect(screen.queryByTestId("postmatch-press")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("postmatch-finish"));
+
+    await playOneDraftMap();
+
+    await waitFor(function (): void {
+      expect(screen.getByTestId("series-score")).toHaveTextContent("2-1");
+      expect(screen.getByTestId("postmatch-press")).toBeInTheDocument();
+      expect(mockedInvoke).toHaveBeenCalledWith(
+        "finish_live_match",
+        expect.objectContaining({ lolReport: expect.anything() }),
+      );
+    });
+
+    view.rerender(<MatchSimulation />);
+
+    await waitFor(function (): void {
+      expect(screen.getByTestId("series-score")).toHaveTextContent("2-1");
+      expect(screen.getByTestId("series-score")).not.toHaveTextContent("0-0");
+    });
+
+    fireEvent.click(screen.getByTestId("postmatch-finish"));
+
+    await waitFor(function (): void {
+      expect(navigateMock).toHaveBeenCalledWith("/dashboard");
+    });
+    expect(screen.queryByTestId("champion-draft")).not.toBeInTheDocument();
+  });
+
+  it("completes a Bo5 once one team reaches three wins", async function (): Promise<void> {
+    locationState = {
+      mode: "spectator",
+      snapshot: makeSnapshot(),
+    };
+
+    const gameStateWithBo5 = makeGameStateWithSeriesFixture({
+      id: "fixture-bo5-three-wins",
+      best_of: 5,
+    });
+    gameStoreState = {
+      gameState: gameStateWithBo5,
+      setGameState: setGameStateMock,
+    };
+    liveWinnerQueue.push("blue", "red", "blue", "blue");
+    mockedInvoke.mockImplementation(async function (command: string): Promise<unknown> {
+      if (command === "get_match_snapshot") return makeSnapshot();
+      if (command === "finish_live_match") {
+        return { game: gameStateWithBo5, round_summary: null };
+      }
+      if (command === "apply_champion_mastery_from_draft") return gameStateWithBo5;
+      return null;
+    });
+
+    render(<MatchSimulation />);
+
+    await playOneDraftMap();
+    fireEvent.click(screen.getByTestId("postmatch-finish"));
+    await playOneDraftMap();
+    fireEvent.click(screen.getByTestId("postmatch-finish"));
+    await playOneDraftMap();
+    expect(screen.getByTestId("series-score")).toHaveTextContent("2-1");
+    expect(screen.queryByTestId("postmatch-press")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("postmatch-finish"));
+
+    await playOneDraftMap();
+
+    await waitFor(function (): void {
+      expect(screen.getByTestId("series-score")).toHaveTextContent("3-1");
+      expect(screen.getByTestId("postmatch-press")).toBeInTheDocument();
+      expect(mockedInvoke).toHaveBeenCalledWith(
+        "finish_live_match",
+        expect.objectContaining({ lolReport: expect.anything() }),
+      );
     });
   });
 
@@ -729,9 +973,8 @@ describe("MatchSimulation", function (): void {
 
     render(<MatchSimulation />);
 
-    await waitFor(function (): void {
-      expect(screen.getByTestId("champion-draft")).toHaveTextContent("Complete Draft (0)");
-    });
+    await advanceFromPrematchToDraft();
+    expect(screen.getByTestId("champion-draft")).toHaveTextContent("Complete Draft (0)");
 
     expect(
       localStorage.getItem("fixture-draft-result:fixture-playoff-restart-reset"),
@@ -776,9 +1019,7 @@ describe("MatchSimulation", function (): void {
 
     render(<MatchSimulation />);
 
-    await waitFor(function (): void {
-      expect(screen.getByTestId("champion-draft")).toBeInTheDocument();
-    });
+    await advanceFromPrematchToDraft();
 
     fireEvent.click(screen.getByTestId("champion-draft"));
     await waitFor(function (): void {
@@ -811,6 +1052,99 @@ describe("MatchSimulation", function (): void {
     });
 
     expect(navigateMock).not.toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("does not finalize a Bo3 after one map even when fixture result contains stale wins", async function (): Promise<void> {
+    locationState = {
+      mode: "spectator",
+      snapshot: makeSnapshot(),
+    };
+
+    const gameStateWithStaleScore = makeGameStateWithSeriesFixture({
+      id: "fixture-bo3-stale-one-map",
+      best_of: 3,
+      status: "InProgress",
+      result: {
+        home_wins: 1,
+        away_wins: 0,
+      },
+    });
+    gameStoreState = {
+      gameState: gameStateWithStaleScore,
+      setGameState: setGameStateMock,
+    };
+
+    mockedInvoke.mockImplementation(async function (command: string): Promise<unknown> {
+      if (command === "get_match_snapshot") return makeSnapshot();
+      if (command === "finish_live_match") {
+        throw new Error("Bo3 should not finish after one map");
+      }
+      if (command === "apply_champion_mastery_from_draft") return gameStateWithStaleScore;
+      return null;
+    });
+
+    render(<MatchSimulation />);
+
+    await playOneDraftMap();
+
+    expect(screen.getByTestId("series-score")).toHaveTextContent("1-0");
+    expect(screen.queryByTestId("postmatch-press")).not.toBeInTheDocument();
+    expect(screen.getByTestId("postmatch-finish")).toHaveTextContent("Game 2/3");
+    expect(mockedInvoke).not.toHaveBeenCalledWith(
+      "finish_live_match",
+      expect.anything(),
+    );
+
+    fireEvent.click(screen.getByTestId("postmatch-finish"));
+
+    await advanceFromPrematchToDraft();
+    expect(navigateMock).not.toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("rejects persisted Bo3 completion when stored games do not support the claimed score", async function (): Promise<void> {
+    locationState = {
+      mode: "spectator",
+      snapshot: makeSnapshot(),
+    };
+
+    const gameStateWithInvalidCompletedBo3 = makeGameStateWithSeriesFixture({
+      id: "fixture-bo3-invalid-complete",
+      best_of: 3,
+      status: "Finished",
+      result: {
+        home_wins: 2,
+        away_wins: 0,
+      },
+    });
+    gameStoreState = {
+      gameState: gameStateWithInvalidCompletedBo3,
+      setGameState: setGameStateMock,
+    };
+
+    localStorage.setItem(
+      "fixture-draft-result:fixture-bo3-invalid-complete",
+      JSON.stringify({
+        snapshot: makeSnapshot(),
+        controlledSide: "blue",
+        result: { winnerSide: "blue" },
+        seriesGames: [
+          { gameIndex: 1, result: { winnerSide: "blue" }, winnerSide: "blue" },
+        ],
+        seriesLength: 3,
+        seriesGameIndex: 1,
+        homeSeriesWins: 2,
+        awaySeriesWins: 0,
+      }),
+    );
+
+    mockedInvoke.mockResolvedValueOnce(makeSnapshot());
+
+    render(<MatchSimulation />);
+
+    await advanceFromPrematchToDraft();
+
+    expect(localStorage.getItem("fixture-draft-result:fixture-bo3-invalid-complete")).toBeNull();
+    expect(screen.queryByTestId("postmatch-press")).not.toBeInTheDocument();
   });
 
   it("does not carry stored picked champions into a new BO1 draft", async function (): Promise<void> {
@@ -864,8 +1198,7 @@ describe("MatchSimulation", function (): void {
 
     render(<MatchSimulation />);
 
-    await waitFor(function (): void {
-      expect(screen.getByTestId("champion-draft")).toHaveTextContent("Complete Draft (0)");
-    });
+    await advanceFromPrematchToDraft();
+    expect(screen.getByTestId("champion-draft")).toHaveTextContent("Complete Draft (0)");
   });
 });

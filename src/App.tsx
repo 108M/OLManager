@@ -1,6 +1,8 @@
 import { useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useSettingsStore } from "./store/settingsStore";
+import { useUpdater } from "./hooks/useUpdater";
+import UpdateModal from "./components/updater/UpdateModal";
 import i18n from "./i18n";
 import "./App.css";
 
@@ -9,7 +11,6 @@ const TeamSelection = lazy(() => import("./pages/TeamSelection"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const MatchSimulation = lazy(() => import("./pages/MatchSimulation"));
 const Settings = lazy(() => import("./pages/Settings"));
-const WorldEditor = lazy(() => import("./pages/WorldEditor"));
 
 function LazyFallback() {
   return (
@@ -27,8 +28,20 @@ const SCALE_MAP: Record<string, string> = {
   xlarge: "20px",
 };
 
+const AUTO_CHECK_UPDATES = import.meta.env.PROD;
+
 function App() {
   const { settings, loaded, loadSettings } = useSettingsStore();
+  const {
+    updateAvailable,
+    updateInfo,
+    downloading,
+    progress,
+    error,
+    dismissed,
+    install,
+    dismiss,
+  } = useUpdater(AUTO_CHECK_UPDATES);
 
   useEffect(() => {
     if (!loaded) loadSettings();
@@ -115,9 +128,18 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/match" element={<MatchSimulation />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/world-editor" element={<WorldEditor />} />
         </Routes>
       </Suspense>
+      {updateAvailable && !dismissed && updateInfo && (
+        <UpdateModal
+          updateInfo={updateInfo}
+          downloading={downloading}
+          progress={progress}
+          error={error}
+          onInstall={install}
+          onDismiss={dismiss}
+        />
+      )}
     </BrowserRouter>
   );
 }

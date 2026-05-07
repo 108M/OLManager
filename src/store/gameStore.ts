@@ -5,7 +5,7 @@ import type { GameStateData } from './types';
 export type {
   TeamColors,
   TeamSeasonRecord,
-  TeamMatchRolesData,
+  TeamRolesData,
   TeamKind,
   AcademyLifecycle,
   ErlAssignmentRule,
@@ -28,6 +28,7 @@ export type {
   TeamMatchStatsRecord,
   MatchResult,
   CareerEntry,
+  PlayerAttributes,
   PlayerMatchHistoryEntryData,
   PlayerData,
   TransferOfferData,
@@ -51,13 +52,34 @@ export type {
   SeasonContextData,
   NewsMatchScore,
   NewsArticle,
+  SocialAuthorType,
+  SocialSentiment,
+  SocialPostCategory,
+  SocialPostData,
+  SocialAccountData,
+  SocialTemplateData,
   BoardObjective,
   ScoutingAssignment,
+  ScrimStatus,
+  ScrimFocus,
+  ScrimIssue,
+  PostScrimDecision,
+  ScrimChampionPickData,
+  ScrimReportData,
   ChampionMasteryEntryData,
   ChampionMetaEntryData,
   ChampionPatchNoteData,
   ChampionPatchStateData,
+  ChampionData,
   GameStateData,
+  DayPhase,
+} from './types';
+
+export {
+  compareStandingsByLolScore,
+  getStandingKillDiff,
+  getStandingKillsAgainst,
+  getStandingKillsFor,
 } from './types';
 
 interface GameStore {
@@ -79,10 +101,13 @@ export const useGameStore = create<GameStore>((set) => ({
   gameState: null,
   isDirty: false,
   showFiredModal: false,
-  setGameActive: (active, managerName) => set({
-    hasActiveGame: active,
-    managerName: managerName || null
-  }),
+  setGameActive: (active, managerName) => {
+    console.log("[store] setGameActive called:", { active, managerName });
+    set({
+      hasActiveGame: active,
+      managerName: managerName || null
+    });
+  },
   setGameState: (state) => set({
     gameState: state,
     isDirty: true,

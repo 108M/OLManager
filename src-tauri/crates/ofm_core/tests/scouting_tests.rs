@@ -1,8 +1,9 @@
 use chrono::{TimeZone, Utc};
 use domain::manager::Manager;
 use domain::message::*;
-use domain::player::{Player, PlayerAttributes, Position};
+use domain::player::{Player, PlayerAttributes};
 use domain::staff::{Staff, StaffAttributes, StaffRole};
+use domain::stats::LolRole;
 use domain::team::Team;
 use ofm_core::clock::GameClock;
 use ofm_core::game::Game;
@@ -15,21 +16,21 @@ use ofm_core::scouting::{process_scouting, scout_max_assignments, send_scout};
 fn default_attrs() -> PlayerAttributes {
     PlayerAttributes {
         pace: 70,
-        stamina: 65,
+        mental_resilience: 65,
         strength: 60,
-        agility: 68,
+        champion_pool: 68,
         passing: 72,
-        shooting: 66,
+        laning: 66,
         tackling: 58,
-        dribbling: 74,
+        mechanics: 74,
         defending: 55,
         positioning: 62,
-        vision: 70,
-        decisions: 64,
-        composure: 60,
+        macro_play: 70,
+        consistency: 64,
+        discipline: 60,
         aggression: 50,
-        teamwork: 66,
-        leadership: 55,
+        teamfighting: 66,
+        shotcalling: 55,
         handling: 30,
         reflexes: 30,
         aerial: 58,
@@ -43,7 +44,7 @@ fn make_player(id: &str, name: &str, team_id: &str) -> Player {
         name.to_string(),
         "1998-03-15".to_string(),
         "BR".to_string(),
-        Position::Midfielder,
+        LolRole::Jungle,
         default_attrs(),
     );
     p.team_id = Some(team_id.to_string());
@@ -145,11 +146,12 @@ fn send_scout_creates_assignment() {
 }
 
 #[test]
-fn send_scout_rejects_own_player() {
+fn send_scout_accepts_own_player() {
     let mut game = make_game();
     let result = send_scout(&mut game, "scout1", "p1");
-    assert!(result.is_err());
-    assert!(result.unwrap_err().contains("own players"));
+    assert!(result.is_ok());
+    assert_eq!(game.scouting_assignments.len(), 1);
+    assert_eq!(game.scouting_assignments[0].player_id, "p1");
 }
 
 #[test]
@@ -234,6 +236,70 @@ fn report_has_scout_report_data() {
 }
 
 #[test]
+fn own_player_report_has_exact_attributes_no_noise() {
+    let mut game = make_game();
+    let attrs = default_attrs();
+
+    send_scout(&mut game, "scout1", "p1").unwrap();
+    complete_scouting(&mut game);
+
+    let msg = game
+        .messages
+        .iter()
+        .find(|m| m.category == MessageCategory::ScoutReport)
+        .expect("Should have a scout report for own player");
+
+    let report = msg
+        .context
+        .scout_report
+        .as_ref()
+        .expect("Should have scout_report data");
+
+    assert_eq!(report.player_id, "p1");
+    // With noise_range = 0, fuzzed values should match original exactly
+    assert_eq!(
+        report.mechanics,
+        Some(attrs.mechanics),
+        "Mechanics should be exact for own player"
+    );
+    assert_eq!(
+        report.laning,
+        Some(attrs.laning),
+        "Laning should be exact for own player"
+    );
+    assert_eq!(
+        report.teamfighting,
+        Some(attrs.teamfighting),
+        "Teamfighting should be exact for own player"
+    );
+    assert_eq!(
+        report.macro_,
+        Some(attrs.macro_play),
+        "Macro should be exact for own player"
+    );
+    assert_eq!(
+        report.champion_pool,
+        Some(attrs.champion_pool),
+        "Champion pool should be exact for own player"
+    );
+    assert_eq!(
+        report.discipline,
+        Some(attrs.discipline),
+        "Discipline should be exact for own player"
+    );
+    assert_eq!(
+        report.condition,
+        Some(90),
+        "Condition should be exact for own player"
+    );
+    assert_eq!(
+        report.morale,
+        Some(75),
+        "Morale should be exact for own player"
+    );
+}
+
+#[test]
 fn report_has_i18n_keys() {
     let mut game = make_game();
     send_scout(&mut game, "scout1", "p2").unwrap();
@@ -274,12 +340,12 @@ fn report_has_i18n_keys() {
 
 fn count_revealed(report: &ScoutReportData) -> usize {
     [
-        report.pace,
-        report.shooting,
-        report.passing,
-        report.dribbling,
-        report.defending,
-        report.physical,
+        report.mechanics,
+        report.laning,
+        report.teamfighting,
+        report.macro_,
+        report.champion_pool,
+        report.discipline,
     ]
     .iter()
     .filter(|a| a.is_some())
@@ -430,12 +496,12 @@ fn high_ability_scout_attrs_are_close_to_real() {
             .as_ref()
             .unwrap();
 
-        // Real pace is 70, with noise ±2 → should be in [68, 72]
-        if let Some(pace) = report.pace {
+        // Real mechanics is 74, with noise ±2 → should be in [72, 76]
+        if let Some(mechanics) = report.mechanics {
             assert!(
-                pace >= 65 && pace <= 75,
-                "High-ability fuzzed pace {} should be close to real value 70",
-                pace
+                (72..=76).contains(&mechanics),
+                "High-ability fuzzed mechanics {} should be close to real value 74",
+                mechanics
             );
         }
     }
@@ -462,9 +528,9 @@ fn low_ability_scout_attrs_have_more_noise() {
     // Just verify values are in valid range (1-99)
     for val in [
         report.pace,
-        report.shooting,
+        report.laning,
         report.passing,
-        report.dribbling,
+        report.mechanics,
         report.defending,
         report.physical,
     ] {

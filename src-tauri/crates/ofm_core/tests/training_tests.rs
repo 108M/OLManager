@@ -1,9 +1,13 @@
 use chrono::{TimeZone, Utc};
 use domain::manager::Manager;
-use domain::player::{Player, PlayerAttributes, Position};
+use domain::player::LolRole;
+use domain::player::{Player, PlayerAttributes};
 use domain::staff::{Staff, StaffAttributes, StaffRole};
-use domain::team::{Team, TrainingFocus, TrainingIntensity, TrainingSchedule};
-use ofm_core::champions::ChampionMasteryEntry;
+use domain::team::{
+    PostScrimDecision, ScrimChampionPick, ScrimFocus, ScrimIssue, ScrimReport, ScrimStatus, Team,
+    TrainingFocus, TrainingIntensity, TrainingSchedule,
+};
+use ofm_core::champions::{ChampionMasteryEntry, ChampionMetaEntry};
 use ofm_core::clock::GameClock;
 use ofm_core::game::Game;
 use ofm_core::training;
@@ -15,21 +19,21 @@ use ofm_core::training;
 fn default_attrs() -> PlayerAttributes {
     PlayerAttributes {
         pace: 65,
-        stamina: 65,
+        mental_resilience: 65,
         strength: 65,
-        agility: 65,
+        champion_pool: 65,
         passing: 65,
-        shooting: 65,
+        laning: 65,
         tackling: 65,
-        dribbling: 65,
+        mechanics: 65,
         defending: 65,
         positioning: 65,
-        vision: 65,
-        decisions: 65,
-        composure: 65,
+        macro_play: 65,
+        consistency: 65,
+        discipline: 65,
         aggression: 50,
-        teamwork: 65,
-        leadership: 50,
+        teamfighting: 65,
+        shotcalling: 50,
         handling: 20,
         reflexes: 30,
         aerial: 60,
@@ -44,43 +48,53 @@ fn lol_visible_stat(player: &Player, stat: &str) -> u8 {
     };
 
     match stat {
-        "mechanics" => avg([attrs.dribbling, attrs.agility, attrs.pace, attrs.composure]),
+        "mechanics" => avg([
+            attrs.mechanics,
+            attrs.champion_pool,
+            attrs.pace,
+            attrs.discipline,
+        ]),
         "laning" => avg([
-            attrs.shooting,
+            attrs.laning,
             attrs.positioning,
-            attrs.dribbling,
-            attrs.composure,
+            attrs.mechanics,
+            attrs.discipline,
         ]),
         "teamfighting" => avg([
-            attrs.teamwork,
-            attrs.stamina,
-            attrs.decisions,
-            attrs.composure,
+            attrs.teamfighting,
+            attrs.mental_resilience,
+            attrs.consistency,
+            attrs.discipline,
         ]),
         "macro" => avg([
-            attrs.vision,
-            attrs.decisions,
+            attrs.macro_play,
+            attrs.consistency,
             attrs.positioning,
             attrs.passing,
         ]),
         "consistency" => avg([
-            attrs.decisions,
-            attrs.vision,
-            attrs.composure,
-            attrs.teamwork,
+            attrs.consistency,
+            attrs.macro_play,
+            attrs.discipline,
+            attrs.teamfighting,
         ]),
         "shotcalling" => avg([
-            attrs.leadership,
-            attrs.teamwork,
-            attrs.vision,
-            attrs.decisions,
+            attrs.shotcalling,
+            attrs.teamfighting,
+            attrs.macro_play,
+            attrs.consistency,
         ]),
-        "champion_pool" => avg([attrs.dribbling, attrs.agility, attrs.vision, attrs.passing]),
+        "champion_pool" => avg([
+            attrs.mechanics,
+            attrs.champion_pool,
+            attrs.macro_play,
+            attrs.passing,
+        ]),
         "discipline" => avg([
-            attrs.decisions,
-            attrs.composure,
-            attrs.teamwork,
-            attrs.leadership,
+            attrs.consistency,
+            attrs.discipline,
+            attrs.teamfighting,
+            attrs.shotcalling,
         ]),
         _ => panic!("Unknown visible stat {stat}"),
     }
@@ -93,7 +107,7 @@ fn make_player(id: &str, name: &str, team_id: &str, dob: &str) -> Player {
         format!("Full {}", name),
         dob.to_string(),
         "GB".to_string(),
-        Position::Midfielder,
+        LolRole::Jungle,
         default_attrs(),
     );
     p.team_id = Some(team_id.to_string());
@@ -448,6 +462,176 @@ fn scrims_focus_can_improve_teamplay_attrs() {
 }
 
 #[test]
+fn scrim_days_generate_enriched_reports_with_champion_picks() {
+    let mut game = make_game();
+    let mut opponent = make_team("team2", "Rival FC");
+    let opponent_players = vec![
+        make_player("r1", "Rival One", "team2", "2000-01-01"),
+        make_player("r2", "Rival Two", "team2", "2000-01-01"),
+        make_player("r3", "Rival Three", "team2", "2000-01-01"),
+    ];
+    opponent.active_lineup_ids = opponent_players
+        .iter()
+        .map(|player| player.id.clone())
+        .collect();
+    game.teams.push(opponent);
+    game.players.extend(opponent_players);
+    game.teams[0].scrim_weekly_slots = 2;
+    game.teams[0].scrim_weekly_objective = Some(ScrimFocus::DraftPrep);
+    game.teams[0].weekly_scrim_plan_team_ids = vec![vec!["team2".to_string()]];
+    game.players[0].champion_training_targets = vec!["Azir".to_string()];
+
+    training::process_training(&mut game, 2);
+
+    let report = game.teams[0]
+        .scrim_reports
+        .first()
+        .expect("scrim report should be generated");
+    assert_eq!(report.team_id, "team1");
+    assert_eq!(report.opponent_team_id, "team2");
+    assert_eq!(report.status, domain::team::ScrimStatus::Played);
+    assert_eq!(report.focus, ScrimFocus::DraftPrep);
+    assert!(report.quality >= 30);
+    assert!(!report.player_champion_picks.is_empty());
+    assert!(
+        report
+            .player_champion_picks
+            .iter()
+            .any(|pick| pick.champion_id == "Azir")
+    );
+}
+
+#[test]
+fn scrim_block_is_idempotent_before_training_block() {
+    let mut game = make_game();
+    let mut opponent = make_team("team2", "Rival FC");
+    let opponent_players = vec![
+        make_player("r1", "Rival One", "team2", "2000-01-01"),
+        make_player("r2", "Rival Two", "team2", "2000-01-01"),
+        make_player("r3", "Rival Three", "team2", "2000-01-01"),
+    ];
+    opponent.active_lineup_ids = opponent_players
+        .iter()
+        .map(|player| player.id.clone())
+        .collect();
+    game.teams.push(opponent);
+    game.players.extend(opponent_players);
+    game.teams[0].scrim_weekly_slots = 2;
+    game.teams[0].weekly_scrim_plan_team_ids = vec![vec!["team2".to_string()]];
+
+    assert!(training::process_scrim_block(&mut game, 2));
+    let reports_after_scrim_block = game.teams[0].scrim_reports.len();
+    let played_after_scrim_block = game.teams[0].scrim_weekly_played;
+
+    training::process_training(&mut game, 2);
+
+    assert_eq!(game.teams[0].scrim_reports.len(), reports_after_scrim_block);
+    assert_eq!(game.teams[0].scrim_weekly_played, played_after_scrim_block);
+}
+
+#[test]
+fn scrim_mastery_progress_uses_report_quality_and_review_decision() {
+    let mut game = make_game();
+    let before = ofm_core::champions::mastery_for_player_champion(&game, "p1", "Azir");
+
+    ofm_core::champions::apply_scrim_mastery_progress(
+        &mut game,
+        "p1",
+        "Azir",
+        86,
+        false,
+        Some(&PostScrimDecision::TargetedDrills),
+    );
+
+    let after = ofm_core::champions::mastery_for_player_champion(&game, "p1", "Azir");
+    assert!(
+        after > before,
+        "scrim review should improve champion mastery"
+    );
+}
+
+#[test]
+fn sunday_training_generates_rich_weekly_scrim_staff_report() {
+    let mut game = make_game();
+    game.teams[0].scrim_weekly_played = 2;
+    game.teams[0].scrim_weekly_wins = 1;
+    game.teams[0].scrim_weekly_losses = 1;
+    game.teams[0].scrim_weekly_cancellations = 1;
+    game.teams[0].scrim_reports = vec![
+        ScrimReport {
+            date: "2025-06-17".to_string(),
+            week_key: "2025-W25".to_string(),
+            slot_index: 0,
+            weekday: 1,
+            team_id: "team1".to_string(),
+            opponent_team_id: "team2".to_string(),
+            status: ScrimStatus::Played,
+            won: Some(true),
+            focus: ScrimFocus::DraftPrep,
+            issue: Some(ScrimIssue::ObjectiveSetup),
+            severity: 2,
+            quality: 82,
+            player_champion_picks: vec![ScrimChampionPick {
+                player_id: "p1".to_string(),
+                champion_id: "Azir".to_string(),
+                role: "Mid".to_string(),
+            }],
+            post_decision: Some(PostScrimDecision::VodReview),
+            created_on: "2025-06-17T12:00:00Z".to_string(),
+        },
+        ScrimReport {
+            date: "2025-06-19".to_string(),
+            week_key: "2025-W25".to_string(),
+            slot_index: 1,
+            weekday: 3,
+            team_id: "team1".to_string(),
+            opponent_team_id: "team3".to_string(),
+            status: ScrimStatus::Played,
+            won: Some(false),
+            focus: ScrimFocus::DraftPrep,
+            issue: Some(ScrimIssue::ObjectiveSetup),
+            severity: 3,
+            quality: 70,
+            player_champion_picks: vec![ScrimChampionPick {
+                player_id: "p2".to_string(),
+                champion_id: "Azir".to_string(),
+                role: "Mid".to_string(),
+            }],
+            post_decision: Some(PostScrimDecision::TargetedDrills),
+            created_on: "2025-06-19T12:00:00Z".to_string(),
+        },
+    ];
+
+    training::process_training(&mut game, 6);
+
+    let message = game
+        .messages
+        .iter()
+        .find(|message| message.subject == "Weekly Scrim Staff Report")
+        .expect("weekly scrim staff report should be generated");
+
+    assert!(message.body.contains("Average quality: 76"));
+    assert!(message.body.contains("Main focus: Draft prep"));
+    assert!(message.body.contains("Recurring issue: Objective setup"));
+    assert!(message.body.contains("Most practiced champion: Azir"));
+    assert!(message.body.contains("Recommendation:"));
+    assert_eq!(
+        message.i18n_params.get("topFocus"),
+        Some(&"be.msg.scrimWeekly.focus.draftPrep".to_string())
+    );
+    assert_eq!(
+        message.i18n_params.get("recurringIssue"),
+        Some(&"be.msg.scrimWeekly.issues.objectiveSetup".to_string())
+    );
+    assert_eq!(
+        message.i18n_params.get("recommendation"),
+        Some(&"be.msg.scrimWeekly.recommendations.resetBeforeVolume".to_string())
+    );
+    assert_eq!(game.teams[0].scrim_weekly_played, 0);
+    assert_eq!(game.teams[0].scrim_weekly_cancellations, 0);
+}
+
+#[test]
 fn champion_pool_practice_can_improve_mechanics_attrs() {
     let mut game = make_game();
     game.teams[0].training_focus = TrainingFocus::ChampionPoolPractice;
@@ -519,7 +703,7 @@ fn mental_reset_recovery_has_no_attribute_gains() {
             "Mental Reset / Recovery should not change pace"
         );
         assert_eq!(
-            p.attributes.shooting, initial_attrs[i].shooting,
+            p.attributes.laning, initial_attrs[i].laning,
             "Mental Reset / Recovery should not change shooting"
         );
     }
@@ -981,4 +1165,53 @@ fn rival_players_get_auto_targets_and_gain_mastery_on_training() {
         before_azir,
         after_azir
     );
+}
+
+#[test]
+fn rival_auto_targets_prioritize_meta_tier_over_raw_mastery() {
+    let mut game = make_game();
+
+    let mut rival = make_player("p-meta", "Meta Mid", "team2", "2001-04-11");
+    rival.natural_position = domain::player::LolRole::Mid;
+    rival.champion_training_targets = Vec::new();
+    rival.champion_training_target = None;
+    game.players.push(rival);
+
+    game.champion_masteries.push(ChampionMasteryEntry {
+        player_id: "p-meta".to_string(),
+        champion_id: "OffMetaHigh".to_string(),
+        mastery: 92,
+        last_active_on: "2025-06-15".to_string(),
+    });
+    game.champion_masteries.push(ChampionMasteryEntry {
+        player_id: "p-meta".to_string(),
+        champion_id: "MetaLow".to_string(),
+        mastery: 30,
+        last_active_on: "2025-06-15".to_string(),
+    });
+
+    game.champion_patch.discovered_champion_ids =
+        vec!["OffMetaHigh".to_string(), "MetaLow".to_string()];
+    game.champion_patch.hidden_meta = vec![
+        ChampionMetaEntry {
+            champion_id: "MetaLow".to_string(),
+            role: "Mid".to_string(),
+            tier: "S".to_string(),
+        },
+        ChampionMetaEntry {
+            champion_id: "OffMetaHigh".to_string(),
+            role: "Mid".to_string(),
+            tier: "D".to_string(),
+        },
+    ];
+
+    ofm_core::champions::ensure_training_targets_from_mastery(&mut game, "p-meta");
+    let player = game
+        .players
+        .iter()
+        .find(|candidate| candidate.id == "p-meta")
+        .expect("meta test player should exist");
+    let targets = ofm_core::champions::training_targets_for_player(player);
+
+    assert_eq!(targets.first().map(String::as_str), Some("MetaLow"));
 }

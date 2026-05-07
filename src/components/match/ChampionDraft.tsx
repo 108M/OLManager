@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { MatchSnapshot } from "./types";
-import type { GameStateData } from "../../store/gameStore";
+import type { GameStateData, ScrimReportData } from "../../store/gameStore";
 import { useSettingsStore } from "../../store/settingsStore";
 import { getChampionTiming } from "../../lib/championTiming";
 import { getLolStaffEffectsForTeam } from "../../lib/lolStaffEffects";
@@ -11,6 +11,11 @@ import teamsSeed from "../../../data/lec/draft/teams.json";
 import playersSeed from "../../../data/lec/draft/players.json";
 import championsSeed from "../../../data/lec/draft/champions.json";
 import aiConfigSeed from "../../../data/lec/draft/ai-config.json";
+import {
+  computeBanRecommendationScore as computeUnifiedBanRecommendationScore,
+  rankBanCandidates,
+  type BanRecommendationContext,
+} from "./draftIntelHelpers";
 
 type Side = "blue" | "red";
 type DraftActionType = "ban" | "pick";
@@ -38,6 +43,18 @@ interface DraftPick {
 
 interface DraftSelection {
   championId: string;
+}
+
+export interface ScrimDraftPickInput {
+  championId: string;
+  playerId?: string | null;
+}
+
+export interface ScrimDraftSignal {
+  comfort: number;
+  preparation: number;
+  synergy: number;
+  reasons: string[];
 }
 
 interface DraftAdviceTip {
@@ -424,10 +441,6 @@ const AI_WEIGHTS = {
     counterAdvantageWeight: numberOrDefault(AI_CONFIG_SEED.data?.pick?.counterAdvantageWeight, 4),
     counterRiskWeight: numberOrDefault(AI_CONFIG_SEED.data?.pick?.counterRiskWeight, 3),
   },
-  ban: {
-    enemyMasteryWeight: numberOrDefault(AI_CONFIG_SEED.data?.ban?.enemyMasteryWeight, 1.15),
-    metaWeight: numberOrDefault(AI_CONFIG_SEED.data?.ban?.metaWeight, 0.9),
-  },
   score: {
     counterAdvantageWeight: numberOrDefault(AI_CONFIG_SEED.data?.score?.counterAdvantageWeight, 2),
     counterRiskWeight: numberOrDefault(AI_CONFIG_SEED.data?.score?.counterRiskWeight, 2),
@@ -454,8 +467,17 @@ function mapSeedRoleToDraftRole(role: string): Role | null {
   return null;
 }
 
-function mapSnapshotPositionToDraftRole(position: string): Role {
-  const key = normalizeKey(position);
+function mapSnapshotPositionToDraftRole(role: string): Role {
+  // Handle PascalCase engine roles (Top, Jungle, Mid, Adc, Support) directly
+  const engineKey = role.toLowerCase().replace(/[^a-z]/g, "");
+  if (engineKey === "top") return "TOP";
+  if (engineKey === "jungle") return "JUNGLE";
+  if (engineKey === "mid") return "MID";
+  if (engineKey === "adc") return "ADC";
+  if (engineKey === "support") return "SUPPORT";
+
+  // Fallback: map football positions to LoL roles
+  const key = normalizeKey(role);
   if (key.includes("top") || key === "defender") return "TOP";
   if (key.includes("jung") || key === "midfielder" || key === "centralmidfielder") return "JUNGLE";
   if (key.includes("attackingmidfielder") || key === "mid") return "MID";
@@ -463,25 +485,7 @@ function mapSnapshotPositionToDraftRole(position: string): Role {
   return "SUPPORT";
 }
 
-function roleOrderedSnapshotPlayers<T extends { position: string; id: string }>(players: T[]): T[] {
-  const byRole = new Map<Role, T>();
-  const used = new Set<string>();
-
-  for (const role of ROLE_ORDER) {
-    const player = players.find(
-      (candidate) => !used.has(candidate.id) && mapSnapshotPositionToDraftRole(candidate.position) === role,
-    );
-    if (!player) continue;
-    byRole.set(role, player);
-    used.add(player.id);
-  }
-
-  const remainder = players.filter((candidate) => !used.has(candidate.id));
-  const ordered = ROLE_ORDER.map((role) => byRole.get(role)).filter((value): value is T => !!value);
-  return [...ordered, ...remainder].slice(0, 5);
-}
-
-function roleOrderedSnapshotPlayersWithResolver<T extends { position: string; id: string }>(
+function roleOrderedSnapshotPlayersWithResolver<T extends { role?: string; id: string; name?: string }>(
   players: T[],
   resolveRole: (player: T) => Role,
 ): T[] {
@@ -524,6 +528,10 @@ function masteryBarTone(mastery: number): "gold" | "green" | "red" {
   if (mastery >= 90) return "gold";
   if (mastery >= 55) return "green";
   return "red";
+}
+
+export function computeBanRecommendationScore(context: BanRecommendationContext): number {
+  return computeUnifiedBanRecommendationScore(context);
 }
 
 function knownMetaTierForChampion(
@@ -598,6 +606,78 @@ function championTempo(championId: string): "early" | "mid" | "late" {
   if (mod === 0) return "early";
   if (mod === 1) return "mid";
   return "late";
+}
+
+function reportTimestamp(report: ScrimReportData): number {
+  const raw = report.created_on || report.date;
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function calculateScrimDraftSignal(
+  reports: ScrimReportData[],
+  teamId: string,
+  upcomingOpponentTeamId: string,
+  picks: ScrimDraftPickInput[],
+): ScrimDraftSignal {
+  const playedReports = reports
+    .filter((report) => report.team_id === teamId && report.status === "Played")
+    .slice()
+    .sort((left, right) => reportTimestamp(right) - reportTimestamp(left))
+    .slice(0, 8);
+
+  if (playedReports.length === 0 || picks.length === 0) {
+    return { comfort: 0, preparation: 0, synergy: 0, reasons: [] };
+  }
+
+  let comfort = 0;
+  let preparation = 0;
+  let synergy = 0;
+  const reasons = new Set<string>();
+  const pickedChampionKeys = new Set(picks.map((pick) => normalizeKey(pick.championId)));
+
+  picks.forEach((pick) => {
+    const championKey = normalizeKey(pick.championId);
+    if (!championKey) return;
+
+    const practicedBySamePlayer = playedReports.some((report) =>
+      report.player_champion_picks.some((scrimPick) => {
+        if (normalizeKey(scrimPick.champion_id) !== championKey) return false;
+        return pick.playerId ? scrimPick.player_id === pick.playerId : true;
+      }),
+    );
+
+    if (practicedBySamePlayer) {
+      comfort += 1;
+      reasons.add("recent champion reps");
+    }
+  });
+
+  playedReports.forEach((report) => {
+    const practicedChampionKeys = new Set(
+      report.player_champion_picks.map((pick) => normalizeKey(pick.champion_id)),
+    );
+    const overlap = Array.from(pickedChampionKeys).filter((championKey) =>
+      practicedChampionKeys.has(championKey),
+    ).length;
+
+    if (overlap >= 2) {
+      synergy += overlap >= 4 ? 2 : 1;
+      reasons.add("scrimmed core together");
+    }
+
+    if (report.opponent_team_id === upcomingOpponentTeamId) {
+      preparation += report.focus === "DraftPrep" || report.post_decision === "VodReview" ? 2 : 1;
+      reasons.add("recent prep vs this opponent");
+    }
+  });
+
+  return {
+    comfort: Math.min(4, comfort),
+    preparation: Math.min(3, preparation),
+    synergy: Math.min(4, synergy),
+    reasons: Array.from(reasons),
+  };
 }
 
 function hasSynergy(a: string, b: string): boolean {
@@ -694,8 +774,14 @@ export default function ChampionDraft({
   const autoResolvedStepKeyRef = useRef<string | null>(null);
   const finalRoleReassignFxPlayedRef = useRef(false);
 
-  const bluePlayerIds = snapshot.home_team.players.map((player) => player.id);
-  const redPlayerIds = snapshot.away_team.players.map((player) => player.id);
+  const bluePlayerIds = useMemo(
+    () => snapshot.home_team.players.map((player) => player.id),
+    [snapshot.home_team.players],
+  );
+  const redPlayerIds = useMemo(
+    () => snapshot.away_team.players.map((player) => player.id),
+    [snapshot.away_team.players],
+  );
   const userTeamId = controlledSide === "blue" ? snapshot.home_team.id : snapshot.away_team.id;
   const userStaffEffects = getLolStaffEffectsForTeam(gameState, userTeamId);
 
@@ -853,13 +939,22 @@ export default function ChampionDraft({
 
       return roleOrderedSnapshotPlayersWithResolver(snapshot.home_team.players, (player) => {
         const fromState = gameState?.players.find((candidate) => candidate.id === player.id);
-        if (fromState) return resolvePlayerLolRole(fromState) as Role;
+        if (fromState) {
+          const role = resolvePlayerLolRole(fromState) as Role;
+          console.debug("[ChampionDraft] resolve:fromState", { playerId: player.id, name: player.name, naturalPosition: fromState.natural_position, role, fromStateId: fromState.id, snapRole: player.role });
+          return role;
+        }
 
         const fromSeed = homeSeedByIgn.get(normalizeKey((player as { name?: string }).name ?? ""));
         const mappedSeedRole = fromSeed ? mapSeedRoleToDraftRole(String(fromSeed.role ?? "")) : null;
-        if (mappedSeedRole) return mappedSeedRole;
+        if (mappedSeedRole) {
+          console.debug("[ChampionDraft] resolve:fromSeed", { playerId: player.id, name: player.name, seedRole: fromSeed?.role, mappedRole: mappedSeedRole });
+          return mappedSeedRole;
+        }
 
-        return mapSnapshotPositionToDraftRole(player.position);
+        const fallbackRole = mapSnapshotPositionToDraftRole(player.role ?? "");
+        console.debug("[ChampionDraft] resolve:fallback", { playerId: player.id, name: player.name, engineRole: player.role, fallbackRole });
+        return fallbackRole;
       });
     },
     [gameState?.players, snapshot.home_team.name, snapshot.home_team.players],
@@ -883,7 +978,7 @@ export default function ChampionDraft({
         const mappedSeedRole = fromSeed ? mapSeedRoleToDraftRole(String(fromSeed.role ?? "")) : null;
         if (mappedSeedRole) return mappedSeedRole;
 
-        return mapSnapshotPositionToDraftRole(player.position);
+        return mapSnapshotPositionToDraftRole(player.role ?? "");
       });
     },
     [gameState?.players, snapshot.away_team.name, snapshot.away_team.players],
@@ -1083,6 +1178,14 @@ export default function ChampionDraft({
     return map;
   }, [gameState?.champion_patch?.hidden_meta]);
 
+  const scrimReportsByTeamId = useMemo(() => {
+    const map = new Map<string, ScrimReportData[]>();
+    (gameState?.teams ?? []).forEach((team) => {
+      map.set(team.id, team.scrim_reports ?? []);
+    });
+    return map;
+  }, [gameState?.teams]);
+
   const discoveredMetaChampionIds = useMemo(() => {
     const discovered = new Set<string>();
     (gameState?.champion_patch?.discovered_champion_ids ?? []).forEach((championId) => {
@@ -1195,14 +1298,6 @@ export default function ChampionDraft({
         if (tier !== metaTierFilter) return false;
       }
 
-      if (
-        currentStep?.type === "pick" &&
-        currentStep.side !== controlledSide &&
-        knownRivalChampionIds.size > 0 &&
-        !knownRivalChampionIds.has(champion.id)
-      ) {
-        return false;
-      }
 
       return true;
     });
@@ -1306,30 +1401,30 @@ export default function ChampionDraft({
 
     const targetSide = enemySideFor(currentStep.side);
     const targetPicks = targetSide === "blue" ? bluePicks : redPicks;
-    const alreadyCoveredRoles = assignedRolesForSelections(targetPicks);
-    const roleRelevantCandidates = available.filter((champion) => {
-      if (alreadyCoveredRoles.size === 0) return true;
-      if (champion.roleHints.length === 0) return true;
-      return !champion.roleHints.every((role) => alreadyCoveredRoles.has(role));
+    const enemyCoveredRoles = assignedRolesForSelections(targetPicks);
+    const ranked = rankBanCandidates({
+      available: available.map((champion) => ({
+        championId: champion.id,
+        roleHints: champion.roleHints,
+      })),
+      enemyCoveredRoles,
+      resolveEnemyMastery: (championId) => resolveTeamChampionMastery(targetSide, championId),
+      resolveMetaScore: (championId) => {
+        const champion = championById.get(championId);
+        return champion ? metaScoreForChampion(champion) : 0;
+      },
+      resolveScoringContext: (candidate) => {
+        return {
+          roleAlreadyCovered: candidate.roleHints.length > 0
+            && candidate.roleHints.every((role) => enemyCoveredRoles.has(role as Role)),
+          enemyJungleLocked: enemyCoveredRoles.has("JUNGLE"),
+          isFlexThreat: candidate.roleHints.length >= 2,
+          draftHashSeed: `${stepIndex}:${targetSide}:${candidate.championId}`,
+        };
+      },
     });
-    const banCandidates = roleRelevantCandidates.length > 0 ? roleRelevantCandidates : available;
-
-    let bestBan: ChampionData | null = null;
-    let bestScore = Number.NEGATIVE_INFINITY;
-
-    banCandidates.forEach((champion) => {
-      const enemyMastery = resolveTeamChampionMastery(targetSide, champion.id);
-      const meta = metaScoreForChampion(champion);
-      const score =
-        enemyMastery * AI_WEIGHTS.ban.enemyMasteryWeight +
-        meta * AI_WEIGHTS.ban.metaWeight;
-      if (score > bestScore) {
-        bestScore = score;
-        bestBan = champion;
-      }
-    });
-
-    return bestBan;
+    const bestBanId = ranked[0]?.championId;
+    return bestBanId ? championById.get(bestBanId) ?? null : null;
   };
 
   const selectTimeoutChampionForUserTurn = (): ChampionData | null => {
@@ -1437,28 +1532,30 @@ export default function ChampionDraft({
 
       const targetSide = enemySideFor(step.side);
       const targetPicks = targetSide === "blue" ? nextBluePicks : nextRedPicks;
-      const alreadyCoveredRoles = assignedRolesForSelections(targetPicks);
-      const roleRelevantCandidates = available.filter((champion) => {
-        if (alreadyCoveredRoles.size === 0) return true;
-        if (champion.roleHints.length === 0) return true;
-        return !champion.roleHints.every((role) => alreadyCoveredRoles.has(role));
+      const enemyCoveredRoles = assignedRolesForSelections(targetPicks);
+      const ranked = rankBanCandidates({
+        available: available.map((champion) => ({
+          championId: champion.id,
+          roleHints: champion.roleHints,
+        })),
+        enemyCoveredRoles,
+        resolveEnemyMastery: (championId) => resolveTeamChampionMastery(targetSide, championId),
+        resolveMetaScore: (championId) => {
+          const champion = championById.get(championId);
+          return champion ? metaScoreForChampion(champion) : 0;
+        },
+        resolveScoringContext: (candidate) => {
+          return {
+            roleAlreadyCovered: candidate.roleHints.length > 0
+              && candidate.roleHints.every((role) => enemyCoveredRoles.has(role as Role)),
+            enemyJungleLocked: enemyCoveredRoles.has("JUNGLE"),
+            isFlexThreat: candidate.roleHints.length >= 2,
+            draftHashSeed: `${stepIndex}:${targetSide}:${candidate.championId}:debug`,
+          };
+        },
       });
-      const banCandidates = roleRelevantCandidates.length > 0 ? roleRelevantCandidates : available;
-
-      let bestBan: ChampionData | null = null;
-      let bestScore = Number.NEGATIVE_INFINITY;
-
-      banCandidates.forEach((champion) => {
-        const enemyMastery = resolveTeamChampionMastery(targetSide, champion.id);
-        const meta = metaScoreForChampion(champion);
-        const score = enemyMastery * AI_WEIGHTS.ban.enemyMasteryWeight + meta * AI_WEIGHTS.ban.metaWeight;
-        if (score > bestScore) {
-          bestScore = score;
-          bestBan = champion;
-        }
-      });
-
-      return bestBan;
+      const bestBanId = ranked[0]?.championId;
+      return bestBanId ? championById.get(bestBanId) ?? null : null;
     };
 
     let processedSteps = 0;
@@ -1584,6 +1681,8 @@ export default function ChampionDraft({
     const enemyPicks = side === "blue" ? redPicks : bluePicks;
     const ownPlan = planTempo(side === "blue" ? snapshot.home_team.play_style : snapshot.away_team.play_style);
     const teamId = side === "blue" ? snapshot.home_team.id : snapshot.away_team.id;
+    const opponentTeamId = side === "blue" ? snapshot.away_team.id : snapshot.home_team.id;
+    const playerIds = side === "blue" ? bluePlayerIds : redPlayerIds;
     const staffEffects = getLolStaffEffectsForTeam(gameState, teamId);
 
     let mastery = 0;
@@ -1627,6 +1726,16 @@ export default function ChampionDraft({
       preparation = Math.round(Math.max(-1, Math.min(3, (staffEffects.tactics - 1) * 4 + (staffEffects.analysis - 1) * 3)));
     }
 
+    const scrimSignal = calculateScrimDraftSignal(
+      scrimReportsByTeamId.get(teamId) ?? [],
+      teamId,
+      opponentTeamId,
+      ownPicks.map((pick, index) => ({ championId: pick.championId, playerId: playerIds[index] ?? null })),
+    );
+    comfort += scrimSignal.comfort;
+    preparation += scrimSignal.preparation;
+    synergy += scrimSignal.synergy;
+
     return {
       mastery,
       synergy,
@@ -1637,8 +1746,49 @@ export default function ChampionDraft({
     };
   };
 
-  const blueScore = useMemo(() => scoreDraft("blue"), [bluePicks, redPicks, snapshot.home_team.id, snapshot.home_team.play_style, gameState?.staff]);
-  const redScore = useMemo(() => scoreDraft("red"), [bluePicks, redPicks, snapshot.away_team.id, snapshot.away_team.play_style, gameState?.staff]);
+  const blueScore = useMemo(() => scoreDraft("blue"), [
+    bluePicks,
+    redPicks,
+    bluePlayerIds,
+    snapshot.home_team.id,
+    snapshot.home_team.play_style,
+    snapshot.away_team.id,
+    gameState?.staff,
+    scrimReportsByTeamId,
+  ]);
+  const redScore = useMemo(() => scoreDraft("red"), [
+    bluePicks,
+    redPicks,
+    redPlayerIds,
+    snapshot.away_team.id,
+    snapshot.away_team.play_style,
+    snapshot.home_team.id,
+    gameState?.staff,
+    scrimReportsByTeamId,
+  ]);
+
+  const controlledScrimSignal = useMemo(() => {
+    const side = controlledSide;
+    const teamId = side === "blue" ? snapshot.home_team.id : snapshot.away_team.id;
+    const opponentTeamId = side === "blue" ? snapshot.away_team.id : snapshot.home_team.id;
+    const picks = side === "blue" ? bluePicks : redPicks;
+    const playerIds = side === "blue" ? bluePlayerIds : redPlayerIds;
+    return calculateScrimDraftSignal(
+      scrimReportsByTeamId.get(teamId) ?? [],
+      teamId,
+      opponentTeamId,
+      picks.map((pick, index) => ({ championId: pick.championId, playerId: playerIds[index] ?? null })),
+    );
+  }, [
+    bluePicks,
+    bluePlayerIds,
+    controlledSide,
+    redPicks,
+    redPlayerIds,
+    scrimReportsByTeamId,
+    snapshot.away_team.id,
+    snapshot.home_team.id,
+  ]);
 
   useEffect(() => {
     if (!finished) return;
@@ -1901,9 +2051,22 @@ export default function ChampionDraft({
   // ---------------------------------------------------------------------------
   // Dynamic Draft Tips - Assistant Coach & Player Suggestions
   // ---------------------------------------------------------------------------
-  const assistantCoachTips = useMemo(() => {
+  const assistantCoachTips = useMemo<DraftAdviceTip[]>(() => {
     const tips: DraftAdviceTip[] = [];
     if (!gameState) return tips;
+
+    if (finished) {
+      return [
+        {
+          sourceType: "coach",
+          sourceName: t("match.draft.assistantCoach"),
+          sourceRole: t("match.draft.assistantCoach"),
+          sourceImage: ASSISTANT_COACH_PLACEHOLDER,
+          type: "warn",
+          text: t("match.draft.completed", { defaultValue: "Draft completed." }),
+        },
+      ];
+    }
 
     const draftAdviceStage: "ban" | "pick" | "post" = finished
       ? "post"
@@ -1962,12 +2125,37 @@ export default function ChampionDraft({
       if (primaryRole) enemyPickedRoles.add(primaryRole);
     });
 
-    const rivalMasteryCandidates = rivalMasteryDisplay
-      .slice()
-      .filter((entry) => !entry.playerRole || !enemyPickedRoles.has(entry.playerRole));
-    const rivalMasteries = (rivalMasteryCandidates.length > 0 ? rivalMasteryCandidates : rivalMasteryDisplay)
-      .slice()
-      .sort((a, b) => b.mastery - a.mastery);
+    const rivalMasteryCandidates = rivalMasteryDisplay.slice();
+    const enemyLockedJungle = enemyPickedRoles.has("JUNGLE");
+    const draftHashSeed = `${controlledSide}:${stepIndex}:${blueBans.join("|")}:${redBans.join("|")}:${bluePicks
+      .map((pick) => pick.championId)
+      .join("|")}:${redPicks.map((pick) => pick.championId).join("|")}`;
+    const rivalMasteries = rivalMasteryCandidates
+      .map((entry) => {
+        const candidateTier = knownMetaTierForChampion(
+          entry.champion,
+          runtimeMetaScoreByChampion,
+          discoveredMetaChampionIds,
+        );
+        const tier: Exclude<MetaTierFilter, "ALL"> = candidateTier === "?" ? "B" : candidateTier;
+        const roleHints = entry.champion.roleHints;
+        const isFlexThreat = roleHints.length >= 2;
+        const isSpecialThreat = entry.mastery >= 97;
+        const roleAlreadyCovered = Boolean(entry.playerRole && enemyPickedRoles.has(entry.playerRole));
+        const score = computeBanRecommendationScore({
+          enemyMastery: entry.mastery,
+          metaScore: metaScoreForChampion(entry.champion),
+          tier,
+          roleHints,
+          roleAlreadyCovered,
+          enemyJungleLocked: enemyLockedJungle,
+          isFlexThreat,
+          isSpecialThreat,
+          draftHashSeed: `${draftHashSeed}:${entry.champion.id}`,
+        });
+        return { ...entry, recommendationScore: score };
+      })
+      .sort((a, b) => b.recommendationScore - a.recommendationScore);
     if (draftAdviceStage === "ban" && rivalMasteries.length > 0 && coachSkill >= 50) {
       const topRival = rivalMasteries[0];
       if (topRival.mastery >= 75) {
@@ -2091,10 +2279,10 @@ export default function ChampionDraft({
       const playerState = gameState.players.find((item) => item.id === player.id);
       const gameIq = playerState
         ? Math.round(
-          (Number(playerState.attributes.decisions ?? 70) +
-            Number(playerState.attributes.vision ?? 70) +
+          (Number(playerState.attributes.consistency ?? 70) +
+            Number(playerState.attributes.macro_play ?? 70) +
             Number(playerState.attributes.positioning ?? 70) +
-            Number(playerState.attributes.composure ?? 70)) /
+            Number(playerState.attributes.discipline ?? 70)) /
           4,
         )
         : 70;
@@ -2273,6 +2461,8 @@ export default function ChampionDraft({
     snapshot.home_team.id,
     snapshot.away_team.id,
     stepIndex,
+    blueBans,
+    redBans,
     bluePicks,
     redPicks,
     bluePlayers,
@@ -2281,7 +2471,11 @@ export default function ChampionDraft({
     championById,
     championLookupByNormalizedName,
     usedChampionIds,
-    rivalMasteryDisplay
+    rivalMasteryDisplay,
+    discoveredMetaChampionIds,
+    runtimeMetaScoreByChampion,
+    metaScoreForChampion,
+    t,
   ]);
 
   const patchLabel =
@@ -2360,6 +2554,8 @@ export default function ChampionDraft({
     { label: t("match.draft.scoreLabels.comfort"), value: controlledScore.comfort },
     { label: t("match.draft.scoreLabels.preparation"), value: controlledScore.preparation },
   ];
+  const controlledScrimBonusTotal =
+    controlledScrimSignal.comfort + controlledScrimSignal.preparation + controlledScrimSignal.synergy;
   const formattedScoreDelta = scoreDelta >= 0 ? `+${scoreDelta}` : `${scoreDelta}`;
   const seriesBansRequiresTwoRows = seriesLength > 1 && seriesLockedChampions.length > 10;
   const compactBoardLayoutClass =
@@ -2378,7 +2574,7 @@ export default function ChampionDraft({
 
   return (
     <div className={`h-dvh bg-[#0a0a0a] text-white p-2 md:p-4 ${isCompactLayout ? "overflow-y-auto" : "overflow-hidden"}`}>
-      <div className={`w-full max-w-[1350px] mx-auto flex flex-col gap-2 md:gap-3 ${isCompactLayout ? "min-h-full overflow-visible pb-3" : "h-full overflow-hidden"}`}>
+      <div className={`w-[93%] max-w-none mx-auto flex flex-col gap-2 md:gap-3 ${isCompactLayout ? "min-h-full overflow-visible pb-3" : "h-full overflow-hidden"}`}>
         <section className="order-2 shrink-0 rounded-md overflow-hidden border border-[#222]">
           <div
             className={`relative flex items-stretch bg-linear-to-b from-[#032e35] via-[#021720] to-[#000] border-b-4 border-cyan-400 shadow-[0_0_16px_rgba(0,242,255,0.35)] ${topSectionHeightClass}`}
@@ -2699,6 +2895,16 @@ export default function ChampionDraft({
                     </p>
                   ))}
                 </div>
+                {controlledScrimBonusTotal > 0 ? (
+                  <div className="mt-2 rounded border border-cyan-400/20 bg-cyan-400/5 px-2 py-1.5 text-[10px] text-cyan-100">
+                    <p className="font-semibold uppercase tracking-wide">
+                      {t("match.draft.scrimSignalTitle", { defaultValue: "Scrim prep" })} +{controlledScrimBonusTotal}
+                    </p>
+                    <p className="mt-1 text-cyan-100/80">
+                      {controlledScrimSignal.reasons.join(" · ")}
+                    </p>
+                  </div>
+                ) : null}
                 <div className="mt-2 pt-2 border-t border-white/10 text-[11px]">
                   <p className="text-gray-300">
                     {t("match.draft.total")} <span className="float-right font-bold text-white">{controlledScore.total}</span>
@@ -2837,7 +3043,7 @@ export default function ChampionDraft({
                 ) : visibleChampions.length === 0 ? (
                   <p className="relative text-sm text-gray-300">{t("match.draft.noChampionsForFilters")}</p>
                 ) : (
-                  <div className="relative grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 xl:grid-cols-10 gap-1">
+                  <div className="relative grid grid-cols-5 sm:grid-cols-8 md:grid-cols-12 xl:grid-cols-16 gap-1">
                     {visibleChampions.map((champion) => {
                       const isUsed = usedChampionIds.has(champion.id);
                       const showMastery = roleFilter !== "ALL";

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import type { GameStateData } from "../../store/gameStore";
+import { dateKey as scrimDateKey, deriveWeeklyScrimContext, effectiveWeeklyScrimSlots, scrimSlotWeekdays } from "../../lib/scrimContext";
 import { Card, CardBody, CardHeader } from "../ui";
 
 interface HomeThisWeekCardProps {
@@ -47,6 +48,26 @@ export default function HomeThisWeekCard({ gameState }: HomeThisWeekCardProps) {
   );
   const weekStart = startOfWeek(currentDate);
   const currentDateKey = toDateKey(currentDate);
+  const userTeam = teamId ? gameState.teams.find((team) => team.id === teamId) : null;
+
+  const hasScrimOnDate = (date: Date): boolean => {
+    if (!userTeam) return false;
+    const weekly = deriveWeeklyScrimContext(gameState, userTeam);
+    const weekday = (date.getDay() + 6) % 7;
+    const slotWeekdays = scrimSlotWeekdays(effectiveWeeklyScrimSlots(userTeam));
+    const weeklyHasPlan = weekly.slots.some((slot) => {
+      const planned = slot.plan.find(Boolean);
+      return Boolean(planned) && slot.weekday === weekday;
+    });
+    if (weeklyHasPlan) return true;
+
+    const todayKey = scrimDateKey(gameState.clock.current_date);
+    const targetKey = toDateKey(date);
+    if (todayKey !== targetKey) return false;
+    return slotWeekdays.some((candidateWeekday, index) => {
+      return candidateWeekday === weekday && Boolean(userTeam.weekly_scrim_plan_team_ids?.[index]?.some(Boolean));
+    });
+  };
 
   const weekDays = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(weekStart);
@@ -75,6 +96,7 @@ export default function HomeThisWeekCard({ gameState }: HomeThisWeekCardProps) {
         <div className="grid grid-cols-7 gap-1.5">
           {weekDays.map((day) => {
             const isMatchDay = !!day.fixture;
+            const isScrimDay = !isMatchDay && hasScrimOnDate(day.date);
             return (
               <div
                 key={`${day.label}-${day.date.toISOString()}`}
@@ -87,17 +109,23 @@ export default function HomeThisWeekCard({ gameState }: HomeThisWeekCardProps) {
                   {day.date.getDate()}
                 </p>
                 <p
-                  className={`text-[10px] mt-2 font-heading font-bold ${isMatchDay ? "text-primary-500" : "text-gray-400 dark:text-gray-500"}`}
+                  className={`text-[10px] mt-2 font-heading font-bold ${isMatchDay ? "text-primary-500" : isScrimDay ? "text-blue-500" : "text-gray-400 dark:text-gray-500"}`}
                 >
                   {isMatchDay
                     ? t("home.matchShort")
-                    : t("home.restShort")}
+                    : isScrimDay
+                      ? t("home.scrimShort", { defaultValue: "SCRIM" })
+                      : t("home.restShort")}
                 </p>
                 {isMatchDay ? (
                   <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-1">
                     {day.fixture?.competition === "League"
                       ? t("home.leagueShort")
                       : t("home.otherShort")}
+                  </p>
+                ) : isScrimDay ? (
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-1">
+                    {t("home.noOfficialMatchScrimPlanned", { defaultValue: "No official match · Scrims scheduled" })}
                   </p>
                 ) : null}
               </div>

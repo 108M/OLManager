@@ -1,29 +1,20 @@
 use crate::game::{Game, ScoutingAssignment};
 use domain::message::*;
 use domain::staff::StaffRole;
+use domain::stats::LolRole;
 use domain::team::MainFacilityModuleKind;
 use rand::RngExt;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-fn lol_role_from_position(position: &domain::player::Position) -> &'static str {
-    use domain::player::Position;
-
-    match position {
-        Position::Defender
-        | Position::RightBack
-        | Position::CenterBack
-        | Position::LeftBack
-        | Position::RightWingBack
-        | Position::LeftWingBack => "TOP",
-        Position::AttackingMidfielder | Position::RightMidfielder | Position::LeftMidfielder => {
-            "MID"
-        }
-        Position::Forward | Position::RightWinger | Position::LeftWinger | Position::Striker => {
-            "ADC"
-        }
-        Position::Goalkeeper | Position::DefensiveMidfielder => "SUPPORT",
-        Position::Midfielder | Position::CentralMidfielder => "JUNGLE",
+fn lol_role_to_string(role: &LolRole) -> &'static str {
+    match role {
+        LolRole::Top => "TOP",
+        LolRole::Jungle => "JUNGLE",
+        LolRole::Mid => "MID",
+        LolRole::Adc => "ADC",
+        LolRole::Support => "SUPPORT",
+        LolRole::Unknown => "UNKNOWN",
     }
 }
 
@@ -76,14 +67,9 @@ pub fn send_scout(game: &mut Game, scout_id: &str, player_id: &str) -> Result<()
         return Err("Scout does not belong to your team".to_string());
     }
 
-    // Validate player exists and is not on user's team
-    let player = game
-        .players
-        .iter()
-        .find(|p| p.id == player_id)
-        .ok_or("Player not found")?;
-    if player.team_id.as_deref() == Some(user_team_id.as_str()) {
-        return Err("Cannot scout your own players".to_string());
+    // Validate player exists
+    if !game.players.iter().any(|p| p.id == player_id) {
+        return Err("Player not found".to_string());
     }
 
     // Check scout capacity: higher ability = more concurrent assignments
@@ -160,6 +146,7 @@ pub fn process_scouting(game: &mut Game) {
     game.scouting_assignments.retain(|a| a.days_remaining > 0);
 
     // Generate reports for completed assignments
+    let user_team_id = game.manager.team_id.clone();
     for assignment in &completed {
         let scout = game.staff.iter().find(|s| s.id == assignment.scout_id);
         let player = game.players.iter().find(|p| p.id == assignment.player_id);
@@ -173,6 +160,7 @@ pub fn process_scouting(game: &mut Game) {
                 .as_ref()
                 .and_then(|tid| game.teams.iter().find(|t| &t.id == tid))
                 .map(|t| t.name.clone());
+            let is_own_player = player.team_id.as_deref() == user_team_id.as_deref();
 
             let msg = build_scout_report(
                 &assignment.id,
@@ -181,7 +169,7 @@ pub fn process_scouting(game: &mut Game) {
                 &player.match_name,
                 &player.nationality,
                 &player.date_of_birth,
-                lol_role_from_position(&player.natural_position),
+                lol_role_to_string(&player.natural_position),
                 &player.attributes,
                 player.morale,
                 player.condition,
@@ -189,6 +177,7 @@ pub fn process_scouting(game: &mut Game) {
                 judging_potential,
                 team_name.as_deref(),
                 &today,
+                is_own_player,
             );
             game.messages.push(msg);
         }
@@ -210,11 +199,15 @@ fn build_scout_report(
     judging_potential: u8,
     team_name: Option<&str>,
     date: &str,
+    is_own_player: bool,
 ) -> InboxMessage {
     let mut rng = rand::rng();
 
     // Accuracy: higher judging = less noise on reported attributes
-    let noise_range = if judging_ability >= 80 {
+    // Own players get perfect reports (no noise) since the scout knows the squad
+    let noise_range = if is_own_player {
+        0
+    } else if judging_ability >= 80 {
         2
     } else if judging_ability >= 60 {
         5
@@ -234,12 +227,12 @@ fn build_scout_report(
     // LoL UI teaches: mechanics, laning, teamfighting, macro, champion pool and
     // discipline.
     let all_fuzzed: [(u8, &str); 6] = [
-        (fuzz(attrs.dribbling), "Mechanics"),
-        (fuzz(attrs.shooting), "Laning"),
-        (fuzz(attrs.teamwork), "Teamfighting"),
-        (fuzz(attrs.vision), "Macro"),
-        (fuzz(attrs.agility), "Champion Pool"),
-        (fuzz(attrs.composure), "Discipline"),
+        (fuzz(attrs.mechanics), "Mechanics"),
+        (fuzz(attrs.laning), "Laning"),
+        (fuzz(attrs.teamfighting), "Teamfighting"),
+        (fuzz(attrs.macro_play), "Macro"),
+        (fuzz(attrs.champion_pool), "Champion Pool"),
+        (fuzz(attrs.discipline), "Discipline"),
     ];
 
     // Discovery mechanic: scout ability determines how many attrs are revealed

@@ -1,5 +1,6 @@
-use domain::player::{Player, PlayerAttributes, Position};
+use domain::player::{Player, PlayerAttributes};
 use domain::staff::{Staff, StaffAttributes, StaffRole};
+use domain::stats::LolRole;
 use domain::team::PlayStyle;
 use rand::{Rng, RngExt};
 use uuid::Uuid;
@@ -10,39 +11,53 @@ use super::definitions::NamesDefinition;
 // Helper functions for world generation
 // ---------------------------------------------------------------------------
 
-/// Compute a sensible alternate position based on primary position and attributes.
-fn compute_alternate_position(primary: &Position, attrs: &PlayerAttributes) -> Option<Position> {
-    match primary.to_group_position() {
-        Position::Goalkeeper => None,
-        Position::Defender => {
-            // Defenders with good passing/vision → Midfielder
-            if attrs.passing >= 65 && attrs.vision >= 60 {
-                Some(Position::Midfielder)
+/// Compute a sensible alternate role based on primary role and attributes.
+fn compute_alternate_role(primary: &LolRole, attrs: &PlayerAttributes) -> Option<LolRole> {
+    // In LoL, alternate roles are typically adjacent lanes or support-style roles
+    match primary {
+        LolRole::Top => {
+            // Top players with good vision/passing can play Support
+            if attrs.macro_play >= 70 && attrs.teamfighting >= 65 {
+                Some(LolRole::Support)
             } else {
                 None
             }
         }
-        Position::Midfielder => {
-            // Midfielders with strong defending/tackling → Defender
+        LolRole::Jungle => {
+            // Jungle with good decision making can play Mid
+            if attrs.consistency >= 70 && attrs.macro_play >= 65 {
+                Some(LolRole::Mid)
+            } else {
+                None
+            }
+        }
+        LolRole::Mid => {
+            // Mid with good vision can play Jungle or Support
+            if attrs.macro_play >= 70 && attrs.consistency >= 65 {
+                Some(LolRole::Jungle)
+            } else if attrs.macro_play >= 70 && attrs.teamfighting >= 65 {
+                Some(LolRole::Support)
+            } else {
+                None
+            }
+        }
+        LolRole::Adc => {
+            // ADC with good positioning can play Mid
+            if attrs.positioning >= 70 && attrs.laning >= 65 {
+                Some(LolRole::Mid)
+            } else {
+                None
+            }
+        }
+        LolRole::Support => {
+            // Support with good defending can play Top
             if attrs.defending >= 65 && attrs.tackling >= 60 {
-                Some(Position::Defender)
-            }
-            // Midfielders with good shooting/dribbling → Forward
-            else if attrs.shooting >= 65 && attrs.dribbling >= 60 {
-                Some(Position::Forward)
+                Some(LolRole::Top)
             } else {
                 None
             }
         }
-        Position::Forward => {
-            // Forwards with good passing/vision → Midfielder
-            if attrs.passing >= 65 && attrs.vision >= 60 {
-                Some(Position::Midfielder)
-            } else {
-                None
-            }
-        }
-        _ => None,
+        LolRole::Unknown => None,
     }
 }
 
@@ -148,15 +163,14 @@ pub(super) fn generate_random_player_from_def(
     let full_name = format!("{} {}", first_name, last_name);
     let match_name = last_name.clone();
 
-    // Distribute positions: GK:0-1, DEF:2-8, MID:9-15, FWD:16-21
-    let position = if index < 2 {
-        Position::Goalkeeper
-    } else if index < 9 {
-        Position::Defender
-    } else if index < 16 {
-        Position::Midfielder
-    } else {
-        Position::Forward
+    // Distribute roles: 1 per LoL role (5 roles for 5 players)
+    let role = match index {
+        0 => LolRole::Top,
+        1 => LolRole::Jungle,
+        2 => LolRole::Mid,
+        3 => LolRole::Adc,
+        4 => LolRole::Support,
+        _ => LolRole::Unknown, // Fallback for more than 5 players
     };
 
     let p_id = Uuid::new_v4().to_string();
@@ -168,76 +182,88 @@ pub(super) fn generate_random_player_from_def(
     let birth_day = rng.random_range(1..29);
     let dob = format!("{:04}-{:02}-{:02}", birth_year, birth_month, birth_day);
 
-    let group = position.to_group_position();
-    let is_gk = matches!(group, Position::Goalkeeper);
-    let is_def = matches!(group, Position::Defender);
-    let is_fwd = matches!(group, Position::Forward);
+    // Role-based attribute bias
+    let is_support = matches!(role, LolRole::Support);
+    let is_adc = matches!(role, LolRole::Adc);
+    let is_jungle = matches!(role, LolRole::Jungle);
 
     let attributes = PlayerAttributes {
         pace: rng.random_range(40..95),
-        stamina: rng.random_range(40..95),
-        strength: rng.random_range(40..95),
-        agility: rng.random_range(40..95),
-        passing: rng.random_range(40..95),
-        shooting: if is_gk {
-            rng.random_range(20..50)
+        mental_resilience: rng.random_range(40..95),
+        strength: if is_support {
+            rng.random_range(50..90)
         } else {
             rng.random_range(40..95)
         },
-        tackling: if is_gk || is_fwd {
-            rng.random_range(20..60)
-        } else {
-            rng.random_range(40..95)
-        },
-        dribbling: if is_gk {
-            rng.random_range(20..50)
-        } else {
-            rng.random_range(40..95)
-        },
-        defending: if is_gk {
-            rng.random_range(25..55)
-        } else if is_def {
+        champion_pool: rng.random_range(40..95),
+        passing: if is_support {
             rng.random_range(55..95)
         } else {
             rng.random_range(40..95)
         },
-        positioning: rng.random_range(40..95),
-        vision: rng.random_range(40..95),
-        decisions: rng.random_range(40..95),
-        composure: rng.random_range(40..95),
+        laning: if is_adc {
+            rng.random_range(55..95)
+        } else {
+            rng.random_range(40..95)
+        },
+        tackling: if is_support {
+            rng.random_range(45..85)
+        } else {
+            rng.random_range(40..95)
+        },
+        mechanics: if is_adc {
+            rng.random_range(55..95)
+        } else {
+            rng.random_range(40..95)
+        },
+        defending: if is_support || is_jungle {
+            rng.random_range(45..85)
+        } else {
+            rng.random_range(40..95)
+        },
+        positioning: if is_adc || is_support {
+            rng.random_range(55..95)
+        } else {
+            rng.random_range(40..95)
+        },
+        macro_play: if is_support || is_jungle {
+            rng.random_range(55..95)
+        } else {
+            rng.random_range(40..95)
+        },
+        consistency: if is_jungle {
+            rng.random_range(55..95)
+        } else {
+            rng.random_range(40..95)
+        },
+        discipline: if is_adc {
+            rng.random_range(55..90)
+        } else {
+            rng.random_range(40..95)
+        },
         aggression: rng.random_range(30..90),
-        teamwork: rng.random_range(45..95),
-        leadership: rng.random_range(30..90),
-        handling: if is_gk {
-            rng.random_range(50..95)
+        teamfighting: if is_support {
+            rng.random_range(55..95)
         } else {
-            rng.random_range(10..35)
+            rng.random_range(45..95)
         },
-        reflexes: if is_gk {
-            rng.random_range(50..95)
-        } else {
-            rng.random_range(20..50)
-        },
-        aerial: if is_gk {
-            rng.random_range(50..95)
-        } else if is_def {
-            rng.random_range(45..90)
-        } else {
-            rng.random_range(30..75)
-        },
+        shotcalling: rng.random_range(30..90),
+        handling: rng.random_range(10..35),
+        reflexes: rng.random_range(20..50),
+        aerial: rng.random_range(30..75),
     };
 
     let ovr = (attributes.pace as u32
-        + attributes.stamina as u32
+        + attributes.mental_resilience as u32
         + attributes.strength as u32
         + attributes.passing as u32
-        + attributes.shooting as u32
+        + attributes.laning as u32
         + attributes.tackling as u32
-        + attributes.dribbling as u32
+        + attributes.mechanics as u32
         + attributes.defending as u32
         + attributes.positioning as u32
-        + attributes.vision as u32
-        + attributes.decisions as u32)
+        + attributes.macro_play as u32
+        + attributes.consistency as u32)
         / 11;
 
     let age_factor = if age <= 23 {
@@ -261,7 +287,7 @@ pub(super) fn generate_random_player_from_def(
         full_name,
         dob,
         nationality,
-        position,
+        role,
         attributes,
     );
     player.team_id = Some(team_id.to_string());
@@ -271,11 +297,11 @@ pub(super) fn generate_random_player_from_def(
     player.condition = rng.random_range(75..100);
     player.morale = rng.random_range(40..76);
 
-    // ~40% of outfield players get an alternate position based on attributes
-    if !is_gk && rng.random_range(0..5) < 2 {
-        let alt = compute_alternate_position(&player.position, &player.attributes);
-        if let Some(pos) = alt {
-            player.alternate_positions.push(pos);
+    // ~40% of players get an alternate role based on attributes
+    if rng.random_range(0..5) < 2 {
+        let alt = compute_alternate_role(&player.position, &player.attributes);
+        if let Some(role) = alt {
+            player.alternate_positions.push(role);
         }
     }
 

@@ -241,12 +241,12 @@ fn build_notable_upset(game: &Game, fixtures: &[&Fixture]) -> Option<NotableUpse
 }
 
 fn build_top_scorer_delta(game: &Game, fixtures: &[&Fixture]) -> Vec<TopScorerDelta> {
-    let round_goals = round_goal_counts(fixtures);
+    let round_goals = round_goal_counts(game, fixtures);
     let scorers: Vec<ScorerSnapshot> = game
         .players
         .iter()
         .filter_map(|player| {
-            let current_goals = player.stats.goals;
+            let current_goals = player.stats.kills;
             let round_goal_count = round_goals.get(&player.id).copied().unwrap_or(0);
             let previous_goals = current_goals.saturating_sub(round_goal_count);
 
@@ -308,7 +308,7 @@ fn scorer_ranks(
         .collect()
 }
 
-fn round_goal_counts(fixtures: &[&Fixture]) -> HashMap<String, u32> {
+fn round_goal_counts(game: &Game, fixtures: &[&Fixture]) -> HashMap<String, u32> {
     let mut counts = HashMap::new();
 
     for fixture in fixtures {
@@ -317,11 +317,13 @@ fn round_goal_counts(fixtures: &[&Fixture]) -> HashMap<String, u32> {
         };
 
         let Some(report) = result.report.as_ref() else {
+            assign_result_kills_to_team_leader(game, &mut counts, &fixture.home_team_id, result.home_wins);
+            assign_result_kills_to_team_leader(game, &mut counts, &fixture.away_team_id, result.away_wins);
             continue;
         };
 
         for event in &report.events {
-            if event.event_type != "Goal" {
+            if event.event_type != "Goal" && event.event_type != "Kill" {
                 continue;
             }
             let Some(player_id) = event.player_id.as_ref() else {
@@ -334,13 +336,38 @@ fn round_goal_counts(fixtures: &[&Fixture]) -> HashMap<String, u32> {
     counts
 }
 
+fn assign_result_kills_to_team_leader(
+    game: &Game,
+    counts: &mut HashMap<String, u32>,
+    team_id: &str,
+    kills: u8,
+) {
+    if kills == 0 {
+        return;
+    }
+
+    if let Some(player) = game
+        .players
+        .iter()
+        .filter(|player| player.team_id.as_deref() == Some(team_id))
+        .max_by(|left, right| {
+            left.stats
+                .kills
+                .cmp(&right.stats.kills)
+                .then(left.id.cmp(&right.id))
+        })
+    {
+        *counts.entry(player.id.clone()).or_insert(0) += u32::from(kills);
+    }
+}
+
 fn sort_standings(mut standings: Vec<StandingEntry>) -> Vec<StandingEntry> {
     standings.sort_by(|left, right| {
         right
             .points
             .cmp(&left.points)
             .then(right.goal_difference().cmp(&left.goal_difference()))
-            .then(right.goals_for.cmp(&left.goals_for))
+            .then(right.kills_for.cmp(&left.kills_for))
     });
     standings
 }
@@ -348,10 +375,10 @@ fn sort_standings(mut standings: Vec<StandingEntry>) -> Vec<StandingEntry> {
 fn team_strength(game: &Game, team_id: &str) -> f64 {
     let team = game.teams.iter().find(|team| team.id == team_id);
     match team {
-        Some(team) if !team.starting_xi_ids.is_empty() => {
+        Some(team) if !team.active_lineup_ids.is_empty() => {
             let slots = formation_slots(&team.formation);
             let rated_players: Vec<f64> = team
-                .starting_xi_ids
+                .active_lineup_ids
                 .iter()
                 .enumerate()
                 .filter_map(|(index, player_id)| {

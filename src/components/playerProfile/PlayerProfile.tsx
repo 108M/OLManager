@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getContractRiskLevel } from "../../lib/helpers";
 import { calculateLolOvr } from "../../lib/lolPlayerStats";
-import { PlayerData, GameStateData, PlayerMatchHistoryEntryData, ScoutReportData } from "../../store/gameStore";
+import { PlayerData, GameStateData, PlayerMatchHistoryEntryData, ScoutReportData, ChampionMasteryEntryData } from "../../store/gameStore";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { resolveBackendText } from "../../utils/backendI18n";
@@ -44,6 +44,7 @@ import { fallbackChampionForRole, resolvePlayerLolRole } from "../../lib/lolIden
 import {
   makeTransferBid,
   releasePlayerContract,
+  type TransferDestinationData,
   type TransferNegotiationFeedbackData,
 } from "../../services/transfersService";
 import { formatVal } from "../../lib/helpers";
@@ -157,15 +158,37 @@ function buildTopChampionMasteries(
   matchName: string,
   role: "TOP" | "JUNGLE" | "MID" | "ADC" | "SUPPORT",
   championPerformance: Map<string, { wr: number; games: number }>,
+  persistedMasteries: ChampionMasteryEntryData[],
   visibleChampionCount = 4,
 ) {
   const seed = PLAYER_SEEDS.find((entry) => normalizeKey(entry.ign) === normalizeKey(matchName));
-  const champions = [...(seed?.champions ?? [])]
-    .map((entry) => ({
-      championName: String(entry[0] ?? ""),
+  const championByKey = new Map<string, { championId: string; championName: string; mastery: number; persisted: boolean }>();
+
+  for (const entry of seed?.champions ?? []) {
+    const championName = String(entry[0] ?? "");
+    const championId = championIdFromName(championName);
+    if (!championId) continue;
+
+    championByKey.set(normalizeKey(championId), {
+      championId,
+      championName,
       mastery: Number(entry[1] ?? 0),
-    }))
-    .filter((entry) => entry.championName.length > 0)
+      persisted: false,
+    });
+  }
+
+  for (const entry of persistedMasteries) {
+    if (entry.player_id !== playerId || !entry.champion_id) continue;
+    const championId = entry.champion_id;
+    championByKey.set(normalizeKey(championId), {
+      championId,
+      championName: championId,
+      mastery: entry.mastery,
+      persisted: true,
+    });
+  }
+
+  const champions = [...championByKey.values()]
     .sort((a, b) => b.mastery - a.mastery);
 
   if (champions.length === 0) {
@@ -186,29 +209,24 @@ function buildTopChampionMasteries(
   const insignia = champions[0];
   const rest = champions.slice(1, Math.max(1, visibleChampionCount));
 
-  const firstId = championIdFromName(insignia.championName);
-  if (!firstId) return [];
-
   return [
     {
-      championId: firstId,
+      championId: insignia.championId,
       championName: insignia.championName,
-      mastery: Math.max(100, insignia.mastery),
+      mastery: insignia.persisted ? insignia.mastery : Math.max(100, insignia.mastery),
       rank: "insignia" as const,
-      wr: championPerformance.get(firstId)?.wr ?? 0,
-      games: championPerformance.get(firstId)?.games ?? 0,
+      wr: championPerformance.get(insignia.championId)?.wr ?? 0,
+      games: championPerformance.get(insignia.championId)?.games ?? 0,
     },
     ...rest
       .map((entry, idx) => {
-        const championId = championIdFromName(entry.championName);
-        if (!championId) return null;
         return {
-          championId,
+          championId: entry.championId,
           championName: entry.championName,
           mastery: entry.mastery,
           rank: (idx + 1) as 1 | 2 | 3,
-          wr: championPerformance.get(championId)?.wr ?? 0,
-          games: championPerformance.get(championId)?.games ?? 0,
+          wr: championPerformance.get(entry.championId)?.wr ?? 0,
+          games: championPerformance.get(entry.championId)?.games ?? 0,
         };
       })
       .filter(
@@ -232,6 +250,7 @@ interface PlayerProfileProps {
   onClose: () => void;
   onSelectTeam?: (id: string) => void;
   onGameUpdate?: (g: GameStateData) => void;
+  onViewChampion?: (championKey: string) => void;
 }
 
 export default function PlayerProfile({
@@ -241,6 +260,7 @@ export default function PlayerProfile({
   onClose,
   onSelectTeam,
   onGameUpdate,
+  onViewChampion,
 }: PlayerProfileProps) {
   const { t, i18n } = useTranslation();
   const weeklySuffix = t("finances.perWeekSuffix", "/wk");
@@ -263,6 +283,8 @@ export default function PlayerProfile({
   const [showTransferOfferModal, setShowTransferOfferModal] = useState(false);
   const [transferActionSubmitting, setTransferActionSubmitting] = useState(false);
   const [transferOfferAmount, setTransferOfferAmount] = useState("");
+  const [transferOfferDestination, setTransferOfferDestination] =
+    useState<TransferDestinationData>("main");
   const [transferOfferError, setTransferOfferError] = useState<string | null>(null);
   const [transferOfferFeedback, setTransferOfferFeedback] =
     useState<TransferOfferFeedbackState | null>(null);
@@ -397,6 +419,7 @@ export default function PlayerProfile({
     player.match_name,
     primaryRole,
     championPerformance,
+    gameState.champion_masteries ?? [],
     visibleChampionMasteryCount,
   );
   const activePotentialResearchPlayer = gameState.players.find(
@@ -480,6 +503,7 @@ export default function PlayerProfile({
 
     const initialFee = Math.max(1, Math.round(player.market_value));
     setTransferOfferAmount(String(initialFee));
+    setTransferOfferDestination("main");
     setTransferOfferError(null);
     setTransferOfferFeedback(null);
     setShowTransferOfferModal(true);
@@ -504,7 +528,7 @@ export default function PlayerProfile({
     setTransferOfferFeedback(null);
     setTransferActionSubmitting(true);
     try {
-      const result = await makeTransferBid(player.id, fee);
+      const result = await makeTransferBid(player.id, fee, transferOfferDestination);
       onGameUpdate(result.game);
       setTransferOfferFeedback({
         decision: result.decision,
@@ -915,7 +939,7 @@ export default function PlayerProfile({
           />
 
           {topChampions.length > 0 ? (
-            <PlayerProfileChampionsCard champions={topChampions} />
+            <PlayerProfileChampionsCard champions={topChampions} onViewChampion={onViewChampion} />
           ) : null}
         </div>
 
@@ -990,6 +1014,36 @@ export default function PlayerProfile({
               {t("playerProfile.makeTransferOffer")}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">{player.full_name}</p>
+            <div>
+              <label
+                htmlFor="transfer-offer-destination"
+                className="text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-1"
+              >
+                {t("playerProfile.transferOfferDestination", {
+                  defaultValue: "Destination",
+                })}
+              </label>
+              <select
+                id="transfer-offer-destination"
+                value={transferOfferDestination}
+                onChange={(event) =>
+                  setTransferOfferDestination(
+                    event.target.value as TransferDestinationData,
+                  )
+                }
+                className="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-navy-700 border border-gray-200 dark:border-navy-600 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+              >
+                <option value="main">
+                  {gameState.teams.find((team) => team.id === managerTeamId)?.name ??
+                    t("playerProfile.transferOfferMainTeam", {
+                      defaultValue: "Main team",
+                    })}
+                </option>
+                {managerAcademyTeam ? (
+                  <option value="academy">{managerAcademyTeam.name}</option>
+                ) : null}
+              </select>
+            </div>
             <div>
               <label
                 htmlFor="transfer-offer-amount"

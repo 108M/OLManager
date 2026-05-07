@@ -13,14 +13,19 @@ interface ChampionMasteryItem {
 
 interface PlayerProfileChampionsCardProps {
   champions: ChampionMasteryItem[];
+  onViewChampion?: (championKey: string) => void;
 }
 
 function championPortraitUrl(championId: string): string {
   return `https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/${championId}_0.jpg`;
 }
 
-export default function PlayerProfileChampionsCard({ champions }: PlayerProfileChampionsCardProps) {
+export default function PlayerProfileChampionsCard({ champions, onViewChampion }: PlayerProfileChampionsCardProps) {
   const { t } = useTranslation();
+
+  const handleChampionClick = (championId: string) => {
+    onViewChampion?.(championId);
+  };
 
   return (
     <Card className="lg:col-span-2 min-h-[304px]">
@@ -28,9 +33,11 @@ export default function PlayerProfileChampionsCard({ champions }: PlayerProfileC
       <CardBody className="py-4 px-5">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2.5">
           {champions.map((item) => (
-            <div
+            <button
+              type="button"
               key={`${item.rank}-${item.championId}`}
-              className="relative rounded-xl overflow-hidden border border-[#22345d] min-h-[192px] bg-[#111f3d]"
+              onClick={() => handleChampionClick(item.championId)}
+              className="relative rounded-xl overflow-hidden border border-[#22345d] min-h-[192px] bg-[#111f3d] text-left cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(251,191,36,0.2)] hover:border-yellow-400"
             >
               <div
                 className="absolute inset-0 bg-cover bg-center"
@@ -50,9 +57,17 @@ export default function PlayerProfileChampionsCard({ champions }: PlayerProfileC
                     </span>
                   )}
 
-                  <span className={`text-lg font-heading font-black ${item.wr >= 55 ? "text-emerald-300" : item.wr >= 48 ? "text-amber-300" : "text-rose-300"}`}>
-                    {item.wr.toFixed(1)}% {t("playerProfile.championWinRateShort")}
-                  </span>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className={`text-lg font-heading font-black ${item.wr >= 55 ? "text-emerald-300" : item.wr >= 48 ? "text-amber-300" : "text-rose-300"}`}>
+                      {item.wr.toFixed(1)}% {t("playerProfile.championWinRateShort")}
+                    </span>
+                    <div className="w-14 h-1 rounded-full bg-white/15 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${item.wr >= 55 ? "bg-emerald-400" : item.wr >= 48 ? "bg-amber-400" : "bg-rose-400"}`}
+                        style={{ width: `${Math.min(100, item.wr)}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-auto">
@@ -65,7 +80,7 @@ export default function PlayerProfileChampionsCard({ champions }: PlayerProfileC
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </CardBody>

@@ -467,6 +467,15 @@ pub(super) fn pick_combat_target(
         "blue"
     };
 
+    if let Some(enemy_idx) = recent_attacker_target_idx(
+        runtime,
+        champion_idx,
+        LANE_CHAMPION_TRADE_RADIUS,
+        ALLY_HELP_DAMAGE_RECENT_SEC,
+    ) {
+        return Some(CombatTarget::Champion(enemy_idx));
+    }
+
     // Junglers finish their current/next camp route before considering ganks.
     if champion.role == "JGL" {
         if neutral_objective_alive(neutral_timers) {
@@ -1306,10 +1315,6 @@ pub(super) fn resolve_champion_combat(runtime: &mut RuntimeState) {
             continue;
         };
 
-        if attacker_snapshot.role == "JGL" && matches!(target, CombatTarget::Champion(_)) {
-            continue;
-        }
-
         if dist(attacker_snapshot.pos, target_pos) > attack_range {
             if let CombatTarget::Champion(enemy_idx) = &target {
                 let target_snapshot = runtime.champions[*enemy_idx].clone();
@@ -1361,8 +1366,14 @@ pub(super) fn resolve_champion_combat(runtime: &mut RuntimeState) {
         match target {
             CombatTarget::Champion(champion_idx) => {
                 let target_snapshot = runtime.champions[champion_idx].clone();
+                let retaliating_recent_attacker = recent_attacker_target_idx(
+                    runtime,
+                    idx,
+                    LANE_CHAMPION_TRADE_RADIUS,
+                    ALLY_HELP_DAMAGE_RECENT_SEC,
+                ) == Some(champion_idx);
 
-                if attacker_snapshot.role != "JGL" {
+                if attacker_snapshot.role != "JGL" && !retaliating_recent_attacker {
                     let open_eval = evaluate_open_trade_window(
                         &attacker_snapshot,
                         &target_snapshot,
@@ -1390,32 +1401,36 @@ pub(super) fn resolve_champion_combat(runtime: &mut RuntimeState) {
                     }
                 }
 
-                let disengage_eval = evaluate_disengage_champion_trade(
-                    &attacker_snapshot,
-                    &target_snapshot,
-                    now,
-                    &runtime.champions,
-                    &runtime.minions,
-                    &runtime.structures,
-                    runtime.ai_mode,
-                    &runtime.policy,
-                );
-                if disengage_eval.flipped_by_hybrid {
-                    maybe_log_hybrid_trade_flip(
-                        runtime,
+                if !retaliating_recent_attacker {
+                    let disengage_eval = evaluate_disengage_champion_trade(
                         &attacker_snapshot,
-                        "disengage",
-                        disengage_eval.confidence,
-                        disengage_eval.rule_decision,
-                        disengage_eval.decision,
+                        &target_snapshot,
+                        now,
+                        &runtime.champions,
+                        &runtime.minions,
+                        &runtime.structures,
+                        runtime.ai_mode,
+                        &runtime.policy,
                     );
-                }
-                if disengage_eval.decision {
-                    issue_lane_disengage(runtime, idx, target_snapshot.pos);
-                    continue;
+                    if disengage_eval.flipped_by_hybrid {
+                        maybe_log_hybrid_trade_flip(
+                            runtime,
+                            &attacker_snapshot,
+                            "disengage",
+                            disengage_eval.confidence,
+                            disengage_eval.rule_decision,
+                            disengage_eval.decision,
+                        );
+                    }
+                    if disengage_eval.decision {
+                        issue_lane_disengage(runtime, idx, target_snapshot.pos);
+                        continue;
+                    }
                 }
 
-                if !should_engage_enemy_champion(runtime, idx, champion_idx) {
+                if !retaliating_recent_attacker
+                    && !should_engage_enemy_champion(runtime, idx, champion_idx)
+                {
                     if attacker_snapshot.role != "JGL" {
                         issue_lane_disengage(runtime, idx, target_snapshot.pos);
                     }

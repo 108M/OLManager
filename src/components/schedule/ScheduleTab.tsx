@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GameStateData, FixtureData } from "../../store/gameStore";
+import { compareStandingsByLolScore, GameStateData, FixtureData, getStandingKillDiff, getStandingKillsAgainst, getStandingKillsFor } from "../../store/gameStore";
 import { Card, CardBody, Badge } from "../ui";
 import {
   Calendar as CalendarIcon,
@@ -81,11 +81,11 @@ export default function ScheduleTab({
 
     if (fixture.competition === "Playoffs") {
       const playoffStart = league?.fixtures
-        .filter((candidate) => candidate.competition === "Playoffs")
+        ?.filter((candidate) => candidate.competition === "Playoffs")
         .map((candidate) => candidate.matchday)
         .reduce((min, value) => Math.min(min, value), Number.POSITIVE_INFINITY);
       const round = Number.isFinite(playoffStart)
-        ? fixture.matchday - playoffStart + 1
+        ? fixture.matchday - (playoffStart ?? 0) + 1
         : fixture.matchday;
       return `${t("schedule.playoffs")} · ${t("schedule.round", { number: round })} — ${formatMatchDate(fixture.date)}`;
     }
@@ -143,12 +143,7 @@ export default function ScheduleTab({
   });
 
   // Sorted standings
-  const standings = [...league.standings].sort(
-    (a, b) =>
-      b.points - a.points ||
-      b.goals_for - b.goals_against - (a.goals_for - a.goals_against) ||
-      b.goals_for - a.goals_for,
-  );
+  const standings = [...league.standings].sort(compareStandingsByLolScore);
 
   return (
     <div className={view === "calendar" ? "w-full" : "max-w-6xl mx-auto"}>
@@ -248,7 +243,9 @@ export default function ScheduleTab({
                       f.away_team_id === userTeamId;
                     const completed = f.status === "Completed";
                     const bo = inferBestOf(f, bestOfContext);
-                    const score = normalizeLolScore(f, storedDraftResult, userTeamId, bo);
+                    const score = userTeamId
+                      ? normalizeLolScore(f, storedDraftResult, userTeamId, bo)
+                      : null;
                     const homeLogo = getTeamLogoPath(gameState.teams, f.home_team_id);
                     const awayLogo = getTeamLogoPath(gameState.teams, f.away_team_id);
                     const hasStoredResult = !!storedDraftResult;
@@ -381,29 +378,20 @@ export default function ScheduleTab({
                       {t("common.won")}
                     </th>
                     <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
-                      {t("common.drawn")}
-                    </th>
-                    <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
                       {t("common.lost")}
                     </th>
                     <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
-                      {t("common.gf")}
+                      {t("tournaments.mapScore")}
                     </th>
                     <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
-                      {t("common.ga")}
-                    </th>
-                    <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
-                      {t("common.gd")}
-                    </th>
-                    <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
-                      {t("common.pts")}
+                      {t("tournaments.mapsDiff")}
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
                   {standings.map((entry, idx) => {
                     const isUser = entry.team_id === userTeamId;
-                    const gd = entry.goals_for - entry.goals_against;
+                    const mapDiff = getStandingKillDiff(entry);
                     return (
                       <tr
                         key={entry.team_id}
@@ -425,24 +413,15 @@ export default function ScheduleTab({
                           {entry.won}
                         </td>
                         <td className="py-3 px-4 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">
-                          {entry.drawn}
-                        </td>
-                        <td className="py-3 px-4 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">
                           {entry.lost}
                         </td>
                         <td className="py-3 px-4 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">
-                          {entry.goals_for}
-                        </td>
-                        <td className="py-3 px-4 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">
-                          {entry.goals_against}
+                          {getStandingKillsFor(entry)}-{getStandingKillsAgainst(entry)}
                         </td>
                         <td
-                          className={`py-3 px-4 text-center text-sm font-semibold tabular-nums ${gd > 0 ? "text-primary-500" : gd < 0 ? "text-red-500" : "text-gray-500 dark:text-gray-400"}`}
+                          className={`py-3 px-4 text-center text-sm font-semibold tabular-nums ${mapDiff > 0 ? "text-primary-500" : mapDiff < 0 ? "text-red-500" : "text-gray-500 dark:text-gray-400"}`}
                         >
-                          {gd > 0 ? `+${gd}` : gd}
-                        </td>
-                        <td className="py-3 px-4 text-center font-heading font-bold text-sm text-gray-800 dark:text-gray-100 tabular-nums">
-                          {entry.points}
+                          {mapDiff > 0 ? `+${mapDiff}` : mapDiff}
                         </td>
                       </tr>
                     );

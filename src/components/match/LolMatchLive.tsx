@@ -41,7 +41,9 @@ interface Props {
 const SPEEDS = [
   { id: "x1", value: 4 },
   { id: "x2", value: 8 },
-  { id: "x4", value: 12 },
+  { id: "x4", value: 16 },
+  { id: "x8", value: 32 },
+  { id: "x12", value: 48 }
 ];
 
 const DDRAGON_VERSION = "14.24.1";
@@ -50,6 +52,7 @@ const ICON_TOWER = "/lol-map-icons/icon_ui_tower_minimap.png";
 const ICON_GOLD = "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-event-hub/global/default/images/currency.png";
 const ICON_VOIDGRUB = "/lol-map-icons/grub.png";
 const ICON_LEC = "/lec-logo.svg";
+const DEFAULT_DRAGON_ICON = "/lol-map-icons/dragon.png";
 
 interface TeamSeed {
   id: string;
@@ -277,7 +280,7 @@ function dragonKillIconsBySide(
 
   const fallback = [...parsed];
   while (fallback.length < expectedCount) {
-    fallback.push(defaultIcon);
+    fallback.push(DEFAULT_DRAGON_ICON);
   }
   return fallback;
 }
@@ -604,9 +607,14 @@ export default function LolMatchLive({ gameState, snapshot, championSelections, 
   const lastRef = useRef<number>(0);
   const finishedRef = useRef(false);
 
-  const currentState = (): MatchState | null => {
+  const withRuntimeSpeed = (state: MatchState | LolSimV1RuntimeState): LolSimV1RuntimeState => ({
+    ...state,
+    speed: "speed" in state ? state.speed : speed,
+  });
+
+  const currentState = (): LolSimV1RuntimeState | null => {
     if (USE_RUST_SIM_V2 && backendStateRef.current) return backendStateRef.current;
-    return simRef.current?.state ?? null;
+    return simRef.current ? withRuntimeSpeed(simRef.current.state) : null;
   };
 
   useEffect(() => {
@@ -968,9 +976,9 @@ export default function LolMatchLive({ gameState, snapshot, championSelections, 
 
   return (
     <div className="relative h-screen w-screen overflow-auto bg-[#050505] text-white">
-      <div className="flex min-h-screen w-full flex-col items-center justify-start">
+      <div className="flex h-full w-full flex-col items-center justify-start px-[5%] pt-[2.5%]">
         <div className="map-container flex w-full flex-[0_0_auto] flex-col items-center justify-center">
-          <div className="relative mb-2 w-full max-w-[1500px] px-2 pb-6 sm:px-4 sm:pb-9">
+          <div className="relative mb-2 w-full px-2 pb-6 sm:px-4 sm:pb-9">
             <style>{`
               @keyframes lolFeedSlideIn {
                 0% { opacity: 0; transform: translateX(-16px) scale(0.98); }
@@ -1055,7 +1063,7 @@ export default function LolMatchLive({ gameState, snapshot, championSelections, 
             </div>
           </div>
 
-          <div className="flex w-full max-w-[1500px] flex-col items-center gap-3 px-2 lg:flex-row lg:items-stretch lg:justify-center">
+          <div className="flex w-full flex-col items-center gap-3 px-2 lg:flex-row lg:items-stretch lg:justify-center">
             {!isMobileLayout ? (
               <div className="w-full max-w-[260px] lg:w-[246px]">
                 <div className="flex flex-col gap-[7px]">
@@ -1146,9 +1154,10 @@ export default function LolMatchLive({ gameState, snapshot, championSelections, 
           </div>
         </div>
 
-        <div className="hud-board w-full">
-          <LecLowerThirdPanel champions={state?.champions ?? []} championByPlayerId={championByPlayerId} timeSec={state?.timeSec ?? 0} />
-
+        <div className="hud-board w-full flex-1 flex flex-col">
+          <div className="flex-1 overflow-hidden">
+            <LecLowerThirdPanel champions={state?.champions ?? []} championByPlayerId={championByPlayerId} timeSec={state?.timeSec ?? 0} />
+          </div>
           <div className="pb-2" />
         </div>
       </div>

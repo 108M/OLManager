@@ -1,5 +1,4 @@
 export {
-  canonicalPosition,
   calcOvr,
   positionBadgeVariant,
 } from "./playerRating";

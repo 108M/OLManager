@@ -19,6 +19,7 @@ import type {
   LolTacticsData,
   PlayerSelectionOptions,
 } from "../../store/gameStore";
+import { resolveActiveLineupIds } from "../../store/types";
 import { useTranslation } from "react-i18next";
 import {
   DEFAULT_LOL_TACTICS,
@@ -27,6 +28,7 @@ import {
   computeRoleModifiers,
   type DraftRole,
 } from "../../lib/lolTactics";
+import { calculateLolOvr } from "../../lib/lolPlayerStats";
 import { Card, CardBody, CardHeader } from "../ui";
 
 interface TacticsTabProps {
@@ -41,25 +43,6 @@ type JungleStyle = LolTacticsData["jungle_style"];
 type JunglePathing = LolTacticsData["jungle_pathing"];
 type FightPlan = LolTacticsData["fight_plan"];
 type SupportRoaming = LolTacticsData["support_roaming"];
-
-const OVR_KEYS = [
-  "pace",
-  "stamina",
-  "strength",
-  "agility",
-  "passing",
-  "shooting",
-  "tackling",
-  "dribbling",
-  "defending",
-  "positioning",
-  "vision",
-  "decisions",
-  "composure",
-  "aggression",
-  "teamwork",
-  "leadership",
-] as const;
 
 const ROLE_META: Record<DraftRole, { nameKey: string; icon: string; defaultName: string }> = {
   TOP: { nameKey: "tactics.lol.roles.TOP", icon: "🛡️", defaultName: "Top lane" },
@@ -258,23 +241,15 @@ const SUPPORT_ROAMING_OPTIONS: Array<LocalizedOption<SupportRoaming>> = [
   },
 ];
 
-function normalizePosition(position: string): string {
-  return position.toLowerCase().replace(/[^a-z]/g, "");
-}
-
 function positionToRole(position: string): DraftRole | null {
-  const normalized = normalizePosition(position);
-  if (normalized === "defender") return "TOP";
-  if (normalized === "midfielder") return "JUNGLE";
-  if (normalized === "attackingmidfielder") return "MID";
-  if (normalized === "forward") return "ADC";
-  if (normalized === "defensivemidfielder" || normalized === "goalkeeper") return "SUPPORT";
+  // position is already a LolRole ("TOP", "JUNGLE", "MID", "ADC", "SUPPORT")
+  const normalized = position.toUpperCase().replace(/[^A-Z]/g, "");
+  if (normalized === "TOP") return "TOP";
+  if (normalized === "JUNGLE") return "JUNGLE";
+  if (normalized === "MID") return "MID";
+  if (normalized === "ADC") return "ADC";
+  if (normalized === "SUPPORT") return "SUPPORT";
   return null;
-}
-
-function playerBaseOvr(player: GameStateData["players"][number]): number {
-  const sum = OVR_KEYS.reduce((acc, key) => acc + Number(player.attributes[key] ?? 0), 0);
-  return sum / OVR_KEYS.length;
 }
 
 function playerPhotoUrl(playerId: string): string | null {
@@ -392,7 +367,7 @@ export default function TacticsTab({
     if (!myTeam) return [];
 
     const teamPlayers = gameState.players.filter((player) => player.team_id === myTeam.id);
-    const starterIds = new Set(myTeam.starting_xi_ids ?? []);
+    const starterIds = new Set(resolveActiveLineupIds(myTeam));
 
     const startersFirst = [
       ...teamPlayers.filter((player) => starterIds.has(player.id)),
@@ -408,7 +383,7 @@ export default function TacticsTab({
 
     return ROLE_ORDER.map((role) => {
       const player = pickedByRole.get(role) ?? null;
-      const base = player ? playerBaseOvr(player) : 70;
+      const base = player ? calculateLolOvr(player) : 70;
       const modifier = roleModifiers[role] * 1.8;
       const variance = Math.max(0.5, Math.abs(roleModifiers[role]) * 0.6 + 0.6);
       const effective = base + modifier;
@@ -423,6 +398,11 @@ export default function TacticsTab({
       };
     });
   }, [gameState.players, myTeam, roleModifiers, t]);
+
+  const maxAbsModifier = useMemo(
+    () => Math.max(1, ...roleImpactRows.map((r) => Math.abs(r.modifier))),
+    [roleImpactRows],
+  );
 
   if (!myTeam) {
     return (
@@ -454,17 +434,65 @@ export default function TacticsTab({
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
-      <Card accent="accent">
-        <CardHeader>{t("tactics.lol.gamePlan")}</CardHeader>
-        <CardBody>
-          <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-200">
-            {t("tactics.lol.gamePlanDescription")}
-          </p>
-        </CardBody>
-      </Card>
-
       <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[1.6fr_1fr]">
         <div className="flex flex-col gap-4">
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-heading font-bold uppercase tracking-wider text-gray-700 transition-colors hover:bg-gray-50 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-300 dark:hover:bg-navy-600 [&::-webkit-details-marker]:hidden">
+              <span className="flex-1">{t("tactics.lol.gamePlan")}</span>
+              <svg
+                className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-180"
+                xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </summary>
+            <div className="mt-2 rounded-xl border border-gray-200 bg-white p-4 text-sm leading-relaxed text-gray-700 dark:border-navy-600 dark:bg-navy-700 dark:text-gray-200">
+              {t("tactics.lol.gamePlanDescription")}
+            </div>
+          </details>
+
+          {/* Mobile coherence summary — hidden on desktop */}
+          <Card accent="primary" className="xl:hidden">
+            <CardHeader>{t("tactics.lol.impactAndCoherence")}</CardHeader>
+            <CardBody className="p-4">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-navy-600 dark:bg-navy-900/50">
+                {(() => {
+                  const size = 64;
+                  const strokeWidth = 6;
+                  const radius = (size - strokeWidth) / 2;
+                  const circ = 2 * Math.PI * radius;
+                  const normalizedPct = Math.max(0, Math.min(100, ((coherenceScore + 2) / 4) * 100));
+                  const fillLen = (normalizedPct / 100) * circ;
+                  const scoreColor = coherenceScore >= 1 ? "#22c55e" : coherenceScore >= 0 ? "#eab308" : "#ef4444";
+                  const label = coherenceScore >= 1
+                    ? t("tactics.lol.coherence.high")
+                    : coherenceScore >= 0
+                      ? t("tactics.lol.coherence.medium")
+                      : t("tactics.lol.coherence.low");
+                  return (
+                    <div className="flex items-center gap-3">
+                      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
+                        <circle cx={size/2} cy={size/2} r={radius} fill="none" strokeWidth={strokeWidth} className="stroke-gray-200 dark:stroke-navy-600" />
+                        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={scoreColor} strokeWidth={strokeWidth}
+                          strokeDasharray={`${fillLen} ${circ - fillLen}`}
+                          strokeDashoffset={0}
+                          transform={`rotate(-90 ${size/2} ${size/2})`}
+                          className="transition-all duration-500"
+                        />
+                      </svg>
+                      <div>
+                        <p className="text-lg font-heading font-bold text-gray-900 dark:text-gray-100">{label}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-300">
+                          {t("tactics.lol.score")}: {coherenceScore > 0 ? "+" : ""}{coherenceScore.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </CardBody>
+          </Card>
+
           <Section<GameTiming>
             title={t("tactics.lol.sections.gameTiming", "Game timing")}
             value={tactics.game_timing}
@@ -544,25 +572,47 @@ export default function TacticsTab({
             <CardBody className="p-4">
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-navy-600 dark:bg-navy-900/50">
-            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              {t("tactics.lol.coherenceLabel")}
-            </p>
-            <p className="text-lg font-heading font-bold text-gray-900 dark:text-gray-100">
-              {coherenceScore >= 1
+            {(() => {
+              const size = 64;
+              const strokeWidth = 6;
+              const radius = (size - strokeWidth) / 2;
+              const circ = 2 * Math.PI * radius;
+              const normalizedPct = Math.max(0, Math.min(100, ((coherenceScore + 2) / 4) * 100));
+              const fillLen = (normalizedPct / 100) * circ;
+              const scoreColor = coherenceScore >= 1 ? "#22c55e" : coherenceScore >= 0 ? "#eab308" : "#ef4444";
+              const label = coherenceScore >= 1
                 ? t("tactics.lol.coherence.high")
                 : coherenceScore >= 0
                   ? t("tactics.lol.coherence.medium")
-                  : t("tactics.lol.coherence.low")}
-            </p>
-            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-              {t("tactics.lol.score")}: {coherenceScore > 0 ? "+" : ""}
-              {coherenceScore.toFixed(2)}
-            </p>
+                  : t("tactics.lol.coherence.low");
+              return (
+                <div className="flex items-center gap-3">
+                  <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
+                    <circle cx={size/2} cy={size/2} r={radius} fill="none" strokeWidth={strokeWidth} className="stroke-gray-200 dark:stroke-navy-600" />
+                    <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={scoreColor} strokeWidth={strokeWidth}
+                      strokeDasharray={`${fillLen} ${circ - fillLen}`}
+                      strokeDashoffset={0}
+                      transform={`rotate(-90 ${size/2} ${size/2})`}
+                      className="transition-all duration-500"
+                    />
+                  </svg>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {t("tactics.lol.coherenceLabel")}
+                    </p>
+                    <p className="text-lg font-heading font-bold text-gray-900 dark:text-gray-100">{label}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
+                      {t("tactics.lol.score")}: {coherenceScore > 0 ? "+" : ""}{coherenceScore.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="mt-3 space-y-2">
             {coherence.map((item) => (
-              <div key={item.label} className="flex items-start justify-between gap-2 text-xs">
+              <div key={item.labelKey} className="flex items-start justify-between gap-2 text-xs">
                 <span className="text-gray-600 dark:text-gray-300">{t(item.labelKey)}</span>
                 <span
                   className={`font-heading font-bold ${
@@ -619,14 +669,38 @@ export default function TacticsTab({
                     </div>
 
                     <div className="text-right shrink-0">
-                      <p
-                        className={`text-xl leading-none font-heading font-black ${
-                          row.modifier >= 0 ? "text-emerald-400" : "text-rose-400"
-                        }`}
-                      >
-                        {row.modifier >= 0 ? "+" : ""}
-                        {row.modifier.toFixed(1)}
-                      </p>
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <div className="flex items-center gap-0.5">
+                          {/* Negative side */}
+                          <div className="w-12 h-1.5 bg-gray-200 dark:bg-navy-600 rounded-l-full overflow-hidden flex justify-end">
+                            {row.modifier < 0 && (
+                              <div
+                                className="h-full bg-rose-400 rounded-l-full transition-all duration-500"
+                                style={{ width: `${(Math.abs(row.modifier) / maxAbsModifier) * 100}%` }}
+                              />
+                            )}
+                          </div>
+                          {/* Center zero line */}
+                          <div className="w-0.5 h-3 bg-gray-300 dark:bg-navy-500 rounded-full shrink-0" />
+                          {/* Positive side */}
+                          <div className="w-12 h-1.5 bg-gray-200 dark:bg-navy-600 rounded-r-full overflow-hidden">
+                            {row.modifier >= 0 && (
+                              <div
+                                className="h-full bg-emerald-400 rounded-r-full transition-all duration-500"
+                                style={{ width: `${(row.modifier / maxAbsModifier) * 100}%` }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <p
+                          className={`text-xl leading-none font-heading font-black ${
+                            row.modifier >= 0 ? "text-emerald-400" : "text-rose-400"
+                          }`}
+                        >
+                          {row.modifier >= 0 ? "+" : ""}
+                          {row.modifier.toFixed(1)}
+                        </p>
+                      </div>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400">
                         ±{row.variance.toFixed(1)} {t("tactics.lol.variance")}
                       </p>

@@ -13,6 +13,9 @@ vi.mock("react-i18next", () => ({
       if (key === "finances.contractRiskWarning") return "Warning";
       if (key === "finances.contractExpiresOn")
         return `Expires ${String((fallback as Record<string, unknown> | undefined)?.date ?? "")}`;
+      if (typeof fallback === "object" && typeof fallback.defaultValue === "string") {
+        return fallback.defaultValue;
+      }
       return typeof fallback === "string" ? fallback : key;
     },
     i18n: { language: "en" },
@@ -21,7 +24,7 @@ vi.mock("react-i18next", () => ({
 
 const makePlayer = (
   id: string,
-  position: string,
+  position: PlayerData["position"],
   overrides: Partial<PlayerData> = {},
 ): PlayerData => ({
   id,
@@ -102,17 +105,11 @@ const makeTeam = (overrides: Partial<TeamData> = {}): TeamData => ({
   founded_year: 1900,
   colors: { primary: "#00ff00", secondary: "#ffffff" },
   starting_xi_ids: [
-    "gk1",
-    "d1",
-    "d2",
-    "d3",
-    "d4",
-    "m1",
-    "m2",
-    "m3",
-    "m4",
-    "f1",
-    "f2",
+    "top1",
+    "jng1",
+    "mid1",
+    "adc1",
+    "sup1",
   ],
   form: [],
   history: [],
@@ -121,18 +118,12 @@ const makeTeam = (overrides: Partial<TeamData> = {}): TeamData => ({
 
 const makeGameState = (): GameStateData => {
   const players = [
-    makePlayer("gk1", "Goalkeeper"),
-    makePlayer("d1", "Center Back"),
-    makePlayer("d2", "Defender"),
-    makePlayer("d3", "Defender"),
-    makePlayer("d4", "Defender"),
-    makePlayer("m1", "Midfielder"),
-    makePlayer("m2", "Midfielder"),
-    makePlayer("m3", "Midfielder"),
-    makePlayer("m4", "Midfielder"),
-    makePlayer("f1", "Forward"),
-    makePlayer("f2", "Forward"),
-    makePlayer("d5", "Defender", { match_name: "Bench DEF" }),
+    makePlayer("top1", "TOP"),
+    makePlayer("jng1", "JUNGLE"),
+    makePlayer("mid1", "MID"),
+    makePlayer("adc1", "ADC"),
+    makePlayer("sup1", "SUPPORT"),
+    makePlayer("adc2", "ADC", { match_name: "Bench ADC" }),
   ];
 
   return {
@@ -163,17 +154,11 @@ const makeGameState = (): GameStateData => {
     teams: [
       makeTeam({
         starting_xi_ids: [
-          "gk1",
-          "d1",
-          "d2",
-          "d3",
-          "d4",
-          "m1",
-          "m2",
-          "m3",
-          "m4",
-          "f1",
-          "f2",
+          "top1",
+          "jng1",
+          "mid1",
+          "adc1",
+          "sup1",
         ],
       }),
     ],
@@ -188,7 +173,7 @@ const makeGameState = (): GameStateData => {
 };
 
 describe("SquadTab", () => {
-  it("renders only the full roster table and not the moved tactics controls", () => {
+  it("renders a five-role LoL active lineup and keeps bench players visible", () => {
     render(
       <SquadTab
         gameState={makeGameState()}
@@ -198,18 +183,46 @@ describe("SquadTab", () => {
       />,
     );
 
-    expect(screen.getByText("squad.title")).toBeInTheDocument();
-    expect(screen.getByText("Bench DEF")).toBeInTheDocument();
+    expect(screen.getByText("Active Lineup")).toBeInTheDocument();
+    expect(screen.getByText("Bench / Substitutes")).toBeInTheDocument();
+    expect(screen.getByText("Bench ADC")).toBeInTheDocument();
+
+    const activeLineup = screen.getByTestId("active-lineup");
+    for (const role of ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"]) {
+      expect(within(activeLineup).getByText(role)).toBeInTheDocument();
+    }
+
+    expect(screen.queryByText(/Starting XI/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/pitch/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("4-4-2")).not.toBeInTheDocument();
+    expect(screen.queryByText("GK")).not.toBeInTheDocument();
+    expect(screen.queryByText("DEF")).not.toBeInTheDocument();
+    expect(screen.queryByText("FWD")).not.toBeInTheDocument();
     expect(screen.queryByText("What this changes")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("bench-player-d5")).not.toBeInTheDocument();
     expect(screen.queryByTestId("pitch-slot-1")).not.toBeInTheDocument();
   });
 
-  it("shows contract inspection columns and renew entry points for expiring players", () => {
+  it("shows missing role coverage clearly in the active lineup", () => {
+    const gameState = makeGameState();
+    gameState.players = gameState.players.filter((player) => player.natural_position !== "SUPPORT");
+
+    render(
+      <SquadTab
+        gameState={gameState}
+        managerId="mgr1"
+        onSelectPlayer={vi.fn()}
+        onGameUpdate={vi.fn()}
+      />,
+    );
+
+    const supportSlot = screen.getByTestId("active-lineup-role-SUPPORT");
+    expect(within(supportSlot).getByText("SUPPORT")).toBeInTheDocument();
+    expect(within(supportSlot).getByText("Missing role coverage")).toBeInTheDocument();
+  });
+
+  it("keeps substitute player cards usable from the bench roster", () => {
     const onSelectPlayer = vi.fn();
     const gameState = makeGameState();
-    gameState.clock.current_date = "2026-08-01";
-    gameState.players[0].contract_end = "2026-10-15";
 
     render(
       <SquadTab
@@ -220,19 +233,10 @@ describe("SquadTab", () => {
       />,
     );
 
-    expect(screen.getByText("Years Remaining")).toBeInTheDocument();
-    expect(screen.getByText("Contract Risk")).toBeInTheDocument();
-    expect(screen.getByText("Critical")).toBeInTheDocument();
+    const benchCard = screen.getByText("Bench ADC").closest("button");
+    expect(benchCard).not.toBeNull();
+    fireEvent.click(benchCard as HTMLButtonElement);
 
-    const gkRow = screen.getByText("GK1").closest("tr");
-    expect(gkRow).not.toBeNull();
-    const renewBtn = within(gkRow as HTMLTableRowElement).getByRole("button", {
-      name: "Renew Contract",
-    });
-    fireEvent.click(renewBtn);
-
-    expect(onSelectPlayer).toHaveBeenCalledWith("gk1", {
-      openRenewal: true,
-    });
+    expect(onSelectPlayer).toHaveBeenCalledWith("adc2");
   });
 });

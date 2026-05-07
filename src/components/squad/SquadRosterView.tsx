@@ -11,7 +11,13 @@ import { calcAge, formatVal } from "../../lib/helpers";
 import { useTranslation } from "react-i18next";
 import ContextMenu from "../ContextMenu";
 import playersSeed from "../../../data/lec/draft/players.json";
-import { buildStartingXIIds, isPlayerOutOfPosition } from "./SquadTab.helpers";
+import {
+  buildActiveLineupIds,
+  buildActiveLineupSlots,
+  isPlayerOutOfPosition,
+  LOL_ACTIVE_ROLES,
+  LOL_ROLE_LABELS,
+} from "./SquadTab.helpers";
 import { calculateLolOvr } from "../../lib/lolPlayerStats";
 import { resolvePlayerPhoto } from "../../lib/playerPhotos";
 import { fallbackChampionForRole, resolvePlayerLolRole } from "../../lib/lolIdentity";
@@ -28,11 +34,11 @@ const LOL_ROLE_ORDER: Record<LolRole, number> = {
 };
 
 const ROLE_LABEL: Record<LolRole, string> = {
-  TOP: "Top",
+  TOP: "TOP",
   JUNGLE: "JUNGLE",
-  MID: "Mid",
-  ADC: "Bot",
-  SUPPORT: "Support",
+  MID: "MID",
+  ADC: "ADC",
+  SUPPORT: "SUPPORT",
 };
 
 const ROLE_ICON_URLS: Record<LolRole, string> = {
@@ -147,8 +153,16 @@ export default function SquadRosterView({
 
   const roster = gameState.players.filter((player) => player.team_id === myTeam.id);
   const available = roster.filter((player) => !player.injury);
-  const startingXiIds = buildStartingXIIds(available, myTeam.starting_xi_ids || [], myTeam.formation || "4-4-2");
-  const xiIds = new Set(startingXiIds);
+  const activeLineupIds = buildActiveLineupIds(available, myTeam.active_lineup_ids ?? myTeam.starting_xi_ids ?? []);
+  const activeIds = new Set(activeLineupIds);
+  const playersById = useMemo(
+    () => new Map(roster.map((player) => [player.id, player])),
+    [roster],
+  );
+  const activeLineupSlots = useMemo(
+    () => buildActiveLineupSlots(LOL_ACTIVE_ROLES, activeLineupIds, playersById),
+    [activeLineupIds, playersById],
+  );
 
   const sortedRoster = useMemo(() => {
     const sorted = [...roster].sort((a, b) => {
@@ -162,13 +176,13 @@ export default function SquadRosterView({
         case "morale":
           return a.morale - b.morale;
         case "age":
-          return calcAge(a.date_of_birth) - calcAge(b.date_of_birth);
+          return calcAge(a.date_of_birth, gameState.clock.current_date) - calcAge(b.date_of_birth, gameState.clock.current_date);
         default:
           return 0;
       }
     });
     return sortDir === "desc" ? sorted.reverse() : sorted;
-  }, [roster, sortDir, sortKey]);
+  }, [gameState.clock.current_date, roster, sortDir, sortKey]);
 
   const masteryTopChampionsByPlayer = useMemo(() => {
     const grouped = new Map<string, Array<{ champion: string; mastery: number }>>();
@@ -206,7 +220,70 @@ export default function SquadRosterView({
       <Card>
         <div className="p-4 border-b border-[#22345d] bg-[#08132a] rounded-t-xl">
           <h3 className="text-sm font-heading font-bold text-blue-100 uppercase tracking-wide">
-            {t("squad.detailsTitle", { defaultValue: "Detalles de plantilla" })}
+            {t("squad.activeLineup", { defaultValue: "Active Lineup" })}
+          </h3>
+          <p className="mt-1 text-xs text-blue-200/70">
+            {t("squad.activeLineupHint", { defaultValue: "Core five-player League of Legends lineup." })}
+          </p>
+        </div>
+
+        <div
+          className="grid grid-cols-1 md:grid-cols-5 gap-3 p-3 md:p-4 bg-[#061027] rounded-b-xl"
+          data-testid="active-lineup"
+        >
+          {activeLineupSlots.map((slot) => {
+            const player = slot.player;
+            const roleLabel = LOL_ROLE_LABELS[slot.role];
+            const ovr = player ? calculateLolOvr(player) : null;
+            const photo = player ? resolvePlayerPhoto(player.id, player.match_name, player.profile_image_url) : null;
+
+            return (
+              <button
+                key={slot.role}
+                className="min-h-32 rounded-xl border border-[#21365f] bg-[#13274a] px-3 py-3 text-left hover:bg-[#17305a] transition-colors disabled:cursor-default disabled:hover:bg-[#13274a]"
+                data-testid={`active-lineup-role-${slot.role}`}
+                disabled={!player}
+                onClick={() => {
+                  if (player) onSelectPlayer(player.id);
+                }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-heading font-black tracking-widest text-amber-300">{roleLabel}</span>
+                  <img src={ROLE_ICON_URLS[slot.role]} alt={roleLabel} className="w-5 h-5 object-contain opacity-90" />
+                </div>
+
+                {player ? (
+                  <div className="mt-3 flex items-center gap-3">
+                    {photo ? (
+                      <img src={photo} alt={player.match_name} className="w-10 h-10 object-cover rounded-full shrink-0" loading="lazy" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-[#0f213f] border border-white/10 shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-lg leading-none font-heading font-bold text-white truncate">{player.match_name}</p>
+                      <p className="mt-1 text-[11px] text-blue-200/70">{t("common.ovr", { defaultValue: "OVR" })} {ovr}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2">
+                    <p className="text-xs font-heading font-bold uppercase tracking-wide text-amber-300">
+                      {t("squad.missingRoleCoverage", { defaultValue: "Missing role coverage" })}
+                    </p>
+                    <p className="mt-1 text-[11px] text-amber-100/80">
+                      {t("squad.noRoleAvailable", { defaultValue: `No ${roleLabel} available` })}
+                    </p>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="p-4 border-b border-[#22345d] bg-[#08132a] rounded-t-xl">
+          <h3 className="text-sm font-heading font-bold text-blue-100 uppercase tracking-wide">
+            {t("squad.benchSubstitutes", { defaultValue: "Bench / Substitutes" })}
           </h3>
           <div className="mt-3 flex flex-wrap gap-2">
             {([
@@ -240,7 +317,7 @@ export default function SquadRosterView({
             const championNames = masteryTopChampionsByPlayer.get(player.id)
               ?? TOP_3_CHAMPIONS_BY_IGN.get(normalizeKey(player.match_name))
               ?? (fallbackChampion ? [fallbackChampion] : []);
-            const inXI = xiIds.has(player.id);
+            const inXI = activeIds.has(player.id);
             const currentPos = player.natural_position || player.position;
             const wrongPos = inXI && isPlayerOutOfPosition(player, currentPos);
             const annualWage = player.wage;

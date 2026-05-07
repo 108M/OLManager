@@ -53,8 +53,8 @@ pub fn upsert_league(conn: &Connection, league: &League) -> Result<(), String> {
                 s.won,
                 s.drawn,
                 s.lost,
-                s.goals_for,
-                s.goals_against,
+                s.kills_for,
+                s.kills_against,
                 s.points,
             ],
         )
@@ -151,8 +151,8 @@ pub fn load_league(conn: &Connection) -> Result<Option<League>, String> {
                 won: row.get(2)?,
                 drawn: row.get(3)?,
                 lost: row.get(4)?,
-                goals_for: row.get(5)?,
-                goals_against: row.get(6)?,
+                kills_for: row.get(5)?,
+                kills_against: row.get(6)?,
                 points: row.get(7)?,
             })
         })

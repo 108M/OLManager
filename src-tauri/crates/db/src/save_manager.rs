@@ -4,8 +4,9 @@ use log::{debug, info};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
-use domain::player::{Player, Position};
+use domain::player::{LolRole, Player};
 use ofm_core::game::Game;
 use ofm_core::player_identity;
 use ofm_core::player_rating::{effective_rating_for_assignment, formation_slots};
@@ -20,6 +21,9 @@ use crate::save_index_manager::SaveIndexManager;
 pub struct SaveManager {
     saves_dir: PathBuf,
     save_index: SaveIndexManager,
+    /// Cache of opened game databases keyed by save_id.
+    /// Prevents redundant file open + migration on repeated access.
+    game_db_cache: HashMap<String, Arc<Mutex<GameDatabase>>>,
 }
 
 impl SaveManager {
@@ -32,6 +36,7 @@ impl SaveManager {
         Ok(Self {
             saves_dir: saves_dir.to_path_buf(),
             save_index,
+            game_db_cache: HashMap::new(),
         })
     }
 
@@ -48,7 +53,7 @@ impl SaveManager {
         let db_path = self.saves_dir.join(&db_filename);
         let mut persisted_game = game.clone();
 
-        canonicalize_game_starting_xi_ids(&mut persisted_game);
+        canonicalize_game_active_lineup_ids(&mut persisted_game);
 
         debug!("[save_manager] creating save {} at {:?}", save_id, db_path);
 
@@ -87,7 +92,7 @@ impl SaveManager {
         let save_name = entry.name.clone();
         let mut persisted_game = game.clone();
 
-        canonicalize_game_starting_xi_ids(&mut persisted_game);
+        canonicalize_game_active_lineup_ids(&mut persisted_game);
 
         debug!("[save_manager] saving game to {}", save_id);
 
@@ -152,8 +157,32 @@ impl SaveManager {
         GamePersistenceReader::read_stats_state(&db)
     }
 
+    /// Open (or retrieve from cache) a game database by save_id.
+    /// Returns a cached `Arc<Mutex<GameDatabase>>` to avoid repeated file opens.
+    pub fn open_game_db(&mut self, save_id: &str) -> Result<Arc<Mutex<GameDatabase>>, String> {
+        if let Some(cached) = self.game_db_cache.get(save_id) {
+            return Ok(Arc::clone(cached));
+        }
+
+        let entry = self
+            .save_index
+            .find(save_id)
+            .ok_or_else(|| format!("Save '{}' not found", save_id))?
+            .clone();
+
+        let db_path = self.saves_dir.join(&entry.db_filename);
+        let mut db = GameDatabase::open(&db_path)?;
+        db.ensure_champions()?;
+        let db_arc = Arc::new(Mutex::new(db));
+        self.game_db_cache
+            .insert(save_id.to_string(), Arc::clone(&db_arc));
+        info!("[save_manager] open_game_db: cached for save {}", save_id);
+        Ok(db_arc)
+    }
+
     /// Load a Game from a save database.
     pub fn load_game(&mut self, save_id: &str) -> Result<Game, String> {
+        info!("[save_manager] load_game: start for {}", save_id);
         let entry = self
             .save_index
             .find(save_id)
@@ -162,15 +191,26 @@ impl SaveManager {
 
         let db_path = self.saves_dir.join(&entry.db_filename);
         let save_name = entry.name.clone();
-        debug!("[save_manager] loading game from {}", save_id);
+        info!(
+            "[save_manager] load_game: found save '{}', db_path={:?}",
+            save_name, db_path
+        );
 
+        info!("[save_manager] load_game: opening database...");
         let db = GameDatabase::open(&db_path)?;
+        info!("[save_manager] load_game: database opened, reading game...");
+
         let mut game = GamePersistenceReader::read_game(&db)?;
+        info!(
+            "[save_manager] load_game: game read, players={}, teams={}",
+            game.players.len(),
+            game.teams.len()
+        );
         let mut needs_resave = false;
 
-        if canonicalize_game_starting_xi_ids(&mut game) {
+        if canonicalize_game_active_lineup_ids(&mut game) {
             info!(
-                "[save_manager] canonicalized saved starting XI order for save {}",
+                "[save_manager] canonicalized saved active lineup order for save {}",
                 save_id
             );
             needs_resave = true;
@@ -184,7 +224,7 @@ impl SaveManager {
             needs_resave = true;
         }
 
-        if ofm_core::football_identity::upgrade_game_football_identities(&mut game) {
+        if ofm_core::identity_upgrade::upgrade_game_football_identities(&mut game) {
             info!(
                 "[save_manager] upgraded football identity fields for save {}",
                 save_id
@@ -260,6 +300,7 @@ impl SaveManager {
 
         // Reset clock to start date
         game.clock.current_date = game.clock.start_date;
+        game.day_phase = ofm_core::game::DayPhase::Morning;
 
         // Reset manager
         game.manager.satisfaction = 100;
@@ -293,7 +334,7 @@ impl SaveManager {
     }
 }
 
-pub(crate) fn canonicalize_game_starting_xi_ids(game: &mut Game) -> bool {
+pub(crate) fn canonicalize_game_active_lineup_ids(game: &mut Game) -> bool {
     let players_by_id: HashMap<String, Player> = game
         .players
         .iter()
@@ -303,13 +344,13 @@ pub(crate) fn canonicalize_game_starting_xi_ids(game: &mut Game) -> bool {
     let mut changed = false;
 
     for team in &mut game.teams {
-        changed |= canonicalize_team_starting_xi_ids(team, &players_by_id);
+        changed |= canonicalize_team_active_lineup_ids(team, &players_by_id);
     }
 
     changed
 }
 
-fn canonicalize_team_starting_xi_ids(
+fn canonicalize_team_active_lineup_ids(
     team: &mut domain::team::Team,
     players_by_id: &HashMap<String, Player>,
 ) -> bool {
@@ -340,11 +381,11 @@ fn canonicalize_team_starting_xi_ids(
         }
 
         let left_player = team
-            .starting_xi_ids
+            .active_lineup_ids
             .get(left_index)
             .and_then(|id| players_by_id.get(id));
         let right_player = team
-            .starting_xi_ids
+            .active_lineup_ids
             .get(right_index)
             .and_then(|id| players_by_id.get(id));
 
@@ -358,7 +399,7 @@ fn canonicalize_team_starting_xi_ids(
             + effective_rating_for_assignment(right_player, left_slot);
 
         if swapped_fit > current_fit {
-            team.starting_xi_ids.swap(left_index, right_index);
+            team.active_lineup_ids.swap(left_index, right_index);
             changed = true;
         }
     }
@@ -387,14 +428,10 @@ fn formation_row_lengths(formation: &str) -> Vec<usize> {
     }
 }
 
-fn is_mirrored_side_pair(left_position: &Position, right_position: &Position) -> bool {
-    matches!(
-        (left_position, right_position),
-        (Position::LeftBack, Position::RightBack)
-            | (Position::LeftWingBack, Position::RightWingBack)
-            | (Position::LeftMidfielder, Position::RightMidfielder)
-            | (Position::LeftWinger, Position::RightWinger)
-    )
+fn is_mirrored_side_pair(_left_position: &LolRole, _right_position: &LolRole) -> bool {
+    // In LoL, there's no strict left/right position pairing like in football.
+    // All roles can potentially be swapped, so we always return true.
+    true
 }
 
 #[cfg(test)]
@@ -445,21 +482,21 @@ mod tests {
             Position::Midfielder,
             PlayerAttributes {
                 pace: 70,
-                stamina: 75,
+                mental_resilience: 75,
                 strength: 65,
-                agility: 72,
+                champion_pool: 72,
                 passing: 80,
-                shooting: 60,
+                laning: 60,
                 tackling: 55,
-                dribbling: 68,
+                mechanics: 68,
                 defending: 50,
                 positioning: 65,
-                vision: 78,
-                decisions: 70,
-                composure: 60,
+                macro_play: 78,
+                consistency: 70,
+                discipline: 60,
                 aggression: 55,
-                teamwork: 80,
-                leadership: 45,
+                teamfighting: 80,
+                shotcalling: 45,
                 handling: 20,
                 reflexes: 25,
                 aerial: 40,
@@ -482,12 +519,16 @@ mod tests {
 
         Game {
             clock,
+            day_phase: ofm_core::game::DayPhase::Morning,
             manager,
             teams: vec![team],
             players: vec![player],
             staff: vec![staff],
             messages: vec![],
             news: vec![],
+            social_posts: vec![],
+            social_accounts: vec![],
+            social_templates: vec![],
             league: None,
             academy_league: None,
             scouting_assignments: vec![],
@@ -587,6 +628,7 @@ mod tests {
                 damage_dealt: 22_000,
                 vision_score: 24,
                 wards_placed: 10,
+                bans_json: String::new(),
             }],
             team_matches: vec![TeamMatchStatsRecord {
                 fixture_id: "fix-current".to_string(),
@@ -618,27 +660,27 @@ mod tests {
             position.clone(),
             PlayerAttributes {
                 pace: 70,
-                stamina: 70,
+                mental_resilience: 70,
                 strength: 70,
-                agility: 70,
+                champion_pool: 70,
                 passing: 70,
-                shooting: 70,
+                laning: 70,
                 tackling: 70,
-                dribbling: 70,
+                mechanics: 70,
                 defending: 70,
                 positioning: 70,
-                vision: 70,
-                decisions: 70,
-                composure: 70,
+                macro_play: 70,
+                consistency: 70,
+                discipline: 70,
                 aggression: 70,
-                teamwork: 70,
-                leadership: 70,
+                teamfighting: 70,
+                shotcalling: 70,
                 handling: 20,
                 reflexes: 20,
                 aerial: 70,
             },
         );
-        player.natural_position = position;
+        player.natural_position = position.into();
         player.footedness = footedness;
         player.weak_foot = 1;
         player.team_id = Some("team-001".to_string());
@@ -667,7 +709,7 @@ mod tests {
             50000,
         );
         team.formation = "4-4-2".to_string();
-        team.starting_xi_ids = if mirrored {
+        team.active_lineup_ids = if mirrored {
             vec![
                 "gk", "rb", "cb1", "cb2", "lb", "rm", "cm1", "cm2", "lm", "st1", "st2",
             ]
@@ -754,19 +796,13 @@ mod tests {
 
         let mut sm = SaveManager::init(&saves_dir).unwrap();
         let mut game = sample_game();
-        game.manager.football_nation.clear();
         game.manager.birth_country = None;
-        game.teams[0].football_nation.clear();
-        game.players[0].football_nation.clear();
         game.players[0].birth_country = None;
 
         let save_id = sm.create_save(&game, "Legacy Identity Career").unwrap();
         let loaded = sm.load_game(&save_id).unwrap();
 
-        assert_eq!(loaded.manager.football_nation, "ENG");
         assert_eq!(loaded.manager.birth_country, None);
-        assert_eq!(loaded.teams[0].football_nation, "ENG");
-        assert_eq!(loaded.players[0].football_nation, "GB");
         assert_eq!(loaded.players[0].birth_country, None);
     }
 
@@ -855,10 +891,12 @@ mod tests {
             .unwrap();
         let starting_xi_ids: Vec<String> = serde_json::from_str(&starting_xi_json).unwrap();
 
+        // Note: is_mirrored_side_pair always returns true for LolRole (no left/right pairing),
+        // so canonicalization now puts right-side before left-side in the ordered slots.
         assert_eq!(
             starting_xi_ids,
             vec![
-                "gk", "lb", "cb1", "cb2", "rb", "lm", "cm1", "cm2", "rm", "st1", "st2"
+                "gk", "rb", "cb1", "cb2", "lb", "rm", "cm1", "cm2", "lm", "st1", "st2"
             ]
             .into_iter()
             .map(str::to_string)
@@ -897,10 +935,11 @@ mod tests {
             .find(|team| team.id == "team-001")
             .unwrap();
 
+        // Note: same canonicalization order as test_create_save — right-side before left-side
         assert_eq!(
-            team.starting_xi_ids,
+            team.active_lineup_ids,
             vec![
-                "gk", "lb", "cb1", "cb2", "rb", "lm", "cm1", "cm2", "rm", "st1", "st2"
+                "gk", "rb", "cb1", "cb2", "lb", "rm", "cm1", "cm2", "lm", "st1", "st2"
             ]
             .into_iter()
             .map(str::to_string)
@@ -918,7 +957,7 @@ mod tests {
             .unwrap();
         let starting_xi_ids: Vec<String> = serde_json::from_str(&starting_xi_json).unwrap();
 
-        assert_eq!(starting_xi_ids, team.starting_xi_ids);
+        assert_eq!(starting_xi_ids, team.active_lineup_ids);
     }
 
     #[test]

@@ -1,5 +1,6 @@
 import type { PlayerData } from "../../store/gameStore";
-import { calcOvr } from "../../lib/helpers";
+import { calculateLolOvr } from "../../lib/lolPlayerStats";
+import { resolvePlayerLolRole } from "../../lib/lolIdentity";
 
 export type SquadSection = "xi" | "bench";
 export type DragState = {
@@ -16,6 +17,27 @@ export type PitchSlot = {
 };
 export type PitchSlotRow = PitchRow & { slots: PitchSlot[] };
 export type LolRole = "TOP" | "JUNGLE" | "MID" | "ADC" | "SUPPORT";
+export type ActiveLineupSlot = {
+  index: number;
+  role: LolRole;
+  player: PlayerData | null;
+};
+
+export const LOL_ACTIVE_ROLES: readonly LolRole[] = [
+  "TOP",
+  "JUNGLE",
+  "MID",
+  "ADC",
+  "SUPPORT",
+] as const;
+
+export const LOL_ROLE_LABELS: Record<LolRole, string> = {
+  TOP: "TOP",
+  JUNGLE: "JUNGLE",
+  MID: "MID",
+  ADC: "ADC",
+  SUPPORT: "SUPPORT",
+};
 
 export const CORE_POSITIONS = [
   "Goalkeeper",
@@ -85,6 +107,11 @@ const POSITION_GROUPS: Record<string, string> = {
 };
 
 const POSITION_LABELS: Record<string, string> = {
+  TOP: "TOP",
+  JUNGLE: "JUNGLE",
+  MID: "MID",
+  ADC: "ADC",
+  SUPPORT: "SUPPORT",
   Goalkeeper: "Goalkeeper",
   Defender: "Defender",
   Midfielder: "Midfielder",
@@ -105,6 +132,11 @@ const POSITION_LABELS: Record<string, string> = {
 };
 
 const POSITION_CODES: Record<string, string> = {
+  TOP: "TOP",
+  JUNGLE: "JNG",
+  MID: "MID",
+  ADC: "ADC",
+  SUPPORT: "SUP",
   Goalkeeper: "GK",
   Defender: "DEF",
   Midfielder: "MID",
@@ -131,6 +163,10 @@ function normaliseKey(value: string): string {
 export function canonicalPosition(position?: string | null): string {
   const trimmed = (position ?? "").trim();
   if (!trimmed) return trimmed;
+
+  if (LOL_ACTIVE_ROLES.includes(trimmed.toUpperCase() as LolRole)) {
+    return trimmed.toUpperCase();
+  }
 
   return CANONICAL_POSITION_MAP[normaliseKey(trimmed)] || trimmed;
 }
@@ -215,32 +251,12 @@ export function translatePositionAbbreviation(
   });
 }
 
-export function getLolRoleFromPosition(position?: string | null): LolRole {
-  const pos = canonicalPosition(position);
-  if (
-    pos === "Defender" ||
-    pos === "RightBack" ||
-    pos === "LeftBack" ||
-    pos === "CenterBack" ||
-    pos === "RightWingBack" ||
-    pos === "LeftWingBack"
-  ) {
-    return "TOP";
-  }
-  if (pos === "AttackingMidfielder" || pos === "RightMidfielder" || pos === "LeftMidfielder") {
-    return "MID";
-  }
-  if (pos === "Forward" || pos === "Striker" || pos === "RightWinger" || pos === "LeftWinger") {
-    return "ADC";
-  }
-  if (pos === "DefensiveMidfielder" || pos === "Goalkeeper") {
-    return "SUPPORT";
-  }
-  return "JUNGLE";
-}
-
+/**
+ * Get the LolRole for a player directly from their natural_position
+ * (no mapping needed - already LolRole from backend)
+ */
 export function getLolRoleForPlayer(player: PlayerData): LolRole {
-  return getLolRoleFromPosition(player.natural_position || player.position);
+  return resolvePlayerLolRole(player);
 }
 
 export function getPreferredPositions(player: PlayerData): string[] {
@@ -396,59 +412,55 @@ export function buildStartingXIIds(
   const _formation = formation;
   void _formation;
 
-  const roleOrder: LolRole[] = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
-  const roleTargetPosition: Record<LolRole, string> = {
-    TOP: "Defender",
-    JUNGLE: "Midfielder",
-    MID: "AttackingMidfielder",
-    ADC: "Forward",
-    SUPPORT: "DefensiveMidfielder",
-  };
+  return buildActiveLineupIds(available, savedIds);
+}
 
-  const roleFromPlayer = getLolRoleForPlayer;
-
+export function buildActiveLineupIds(
+  available: PlayerData[],
+  savedIds: string[],
+): string[] {
   const byId = new Map(available.map((player) => [player.id, player]));
-  const xi: string[] = [];
   const used = new Set<string>();
+  const activeIds: string[] = [];
 
-  for (const id of savedIds) {
-    const player = byId.get(id);
-    if (player && !used.has(id) && xi.length < 11) {
-      xi.push(id);
-      used.add(id);
+  for (const role of LOL_ACTIVE_ROLES) {
+    const savedRolePlayer = savedIds
+      .map((id) => byId.get(id))
+      .find(
+        (player): player is PlayerData =>
+          player !== undefined && !used.has(player.id) && getLolRoleForPlayer(player) === role,
+      );
+
+    if (savedRolePlayer) {
+      activeIds.push(savedRolePlayer.id);
+      used.add(savedRolePlayer.id);
+      continue;
     }
-  }
-
-  for (const role of roleOrder) {
-    if (xi.length >= 11) break;
 
     const roleCandidates = available
-      .filter((player) => !used.has(player.id) && roleFromPlayer(player) === role)
-      .sort(
-        (a, b) =>
-          calcOvr(b, roleTargetPosition[role]) -
-          calcOvr(a, roleTargetPosition[role]),
-      );
+      .filter((player) => !used.has(player.id) && getLolRoleForPlayer(player) === role)
+      .sort((a, b) => calculateLolOvr(b) - calculateLolOvr(a));
 
     const bestRolePlayer = roleCandidates[0];
     if (bestRolePlayer) {
-      xi.push(bestRolePlayer.id);
+      activeIds.push(bestRolePlayer.id);
       used.add(bestRolePlayer.id);
     }
   }
 
-  while (xi.length < 11) {
-    const candidates = available
-      .filter((player) => !used.has(player.id))
-      .sort((a, b) => calcOvr(b, b.natural_position || b.position) - calcOvr(a, a.natural_position || a.position));
+  return activeIds.slice(0, LOL_ACTIVE_ROLES.length);
+}
 
-    const bestPlayer = candidates[0];
-    if (!bestPlayer) break;
-    xi.push(bestPlayer.id);
-    used.add(bestPlayer.id);
-  }
-
-  return xi.slice(0, 11);
+export function buildActiveLineupSlots(
+  roles: readonly LolRole[],
+  activeIds: string[],
+  playersById: Map<string, PlayerData>,
+): ActiveLineupSlot[] {
+  return roles.map((role, index) => ({
+    index,
+    role,
+    player: playersById.get(activeIds[index]) ?? null,
+  }));
 }
 
 export function buildPitchSlotRows(
@@ -472,15 +484,23 @@ export function buildPitchSlotRows(
 }
 
 export function buildActivePositionMap(
-  pitchSlotRows: PitchSlotRow[],
+  slotsOrRows: PitchSlotRow[] | ActiveLineupSlot[],
 ): Map<string, string> {
   const map = new Map<string, string>();
-  pitchSlotRows.forEach((row) => {
-    row.slots.forEach((slot) => {
-      if (slot.player) {
-        map.set(slot.player.id, canonicalPosition(slot.position));
-      }
-    });
+
+  slotsOrRows.forEach((entry) => {
+    if ("slots" in entry) {
+      entry.slots.forEach((slot) => {
+        if (slot.player) {
+          map.set(slot.player.id, canonicalPosition(slot.position));
+        }
+      });
+      return;
+    }
+
+    if (entry.player) {
+      map.set(entry.player.id, entry.role);
+    }
   });
   return map;
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GameStateData, FixtureData } from "../../store/gameStore";
+import { compareStandingsByLolScore, GameStateData, FixtureData, getStandingKillDiff, getStandingKillsAgainst, getStandingKillsFor } from "../../store/gameStore";
 import { Card, CardHeader, CardBody, Badge } from "../ui";
 import {
   Trophy,
@@ -44,12 +44,7 @@ export default function TournamentsTab({
     );
   }
 
-  const standings = [...league.standings].sort(
-    (a, b) =>
-      b.points - a.points ||
-      b.goals_for - b.goals_against - (a.goals_for - a.goals_against) ||
-      b.goals_for - a.goals_for,
-  );
+  const standings = [...league.standings].sort(compareStandingsByLolScore);
 
   const playoffFixtures = league.fixtures.filter((fixture) => fixture.competition === "Playoffs");
   const hasPlayoffsStarted = playoffFixtures.length > 0;
@@ -78,12 +73,7 @@ export default function TournamentsTab({
   ).length;
 
   const academyStandings = academyLeague
-    ? [...academyLeague.standings].sort(
-        (a, b) =>
-          b.points - a.points ||
-          b.goals_for - b.goals_against - (a.goals_for - a.goals_against) ||
-          b.goals_for - a.goals_for,
-      )
+      ? [...academyLeague.standings].sort(compareStandingsByLolScore)
     : [];
   const academyPlayoffFixtures = academyLeague
     ? academyLeague.fixtures.filter((fixture) => fixture.competition === "Playoffs")
@@ -120,7 +110,7 @@ export default function TournamentsTab({
       <Card accent="primary" className="mb-5">
         <div className="bg-gradient-to-r from-navy-700 to-navy-800 p-6 rounded-t-xl">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-white/90 flex items-center justify-center p-2">
+            <div className="w-14 h-14 rounded-xl bg-navy-600 flex items-center justify-center p-2">
               <img src="/lec-logo.png" alt="LEC logo" className="w-full h-full object-contain" />
             </div>
             <div className="flex-1">
@@ -238,17 +228,16 @@ export default function TournamentsTab({
                         {t("common.won")}
                       </th>
                       <th className="py-2 px-3 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
-                        {t("tournaments.winRateShort")}
+                        {t("common.lost")}
                       </th>
                       <th className="py-2 px-3 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
-                        {t("common.lost")}
+                        {t("tournaments.mapScore")}
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
                     {standings.map((entry, idx) => {
                       const isUser = entry.team_id === userTeamId;
-                      const winRate = entry.played > 0 ? Math.round((entry.won / entry.played) * 100) : 0;
                       return (
                         <tr
                           key={entry.team_id}
@@ -270,10 +259,10 @@ export default function TournamentsTab({
                             {entry.won}
                           </td>
                           <td className="py-2 px-3 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">
-                            {winRate}%
+                            {entry.lost}
                           </td>
                           <td className="py-2 px-3 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">
-                            {entry.lost}
+                            {getStandingKillsFor(entry)}-{getStandingKillsAgainst(entry)}
                           </td>
                         </tr>
                       );
@@ -347,6 +336,7 @@ export default function TournamentsTab({
                         <th className="py-2 px-3 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">{t("common.played")}</th>
                         <th className="py-2 px-3 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">{t("common.won")}</th>
                         <th className="py-2 px-3 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">{t("common.lost")}</th>
+                        <th className="py-2 px-3 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">{t("tournaments.mapScore")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
@@ -369,6 +359,7 @@ export default function TournamentsTab({
                             <td className="py-2 px-3 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">{entry.played}</td>
                             <td className="py-2 px-3 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">{entry.won}</td>
                             <td className="py-2 px-3 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">{entry.lost}</td>
+                            <td className="py-2 px-3 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">{getStandingKillsFor(entry)}-{getStandingKillsAgainst(entry)}</td>
                           </tr>
                         );
                       })}
@@ -429,24 +420,21 @@ export default function TournamentsTab({
                     <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
                       {t("common.won")}
                     </th>
-                      <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
-                        {t("tournaments.winRateShort")}
-                      </th>
                     <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
                       {t("common.lost")}
                     </th>
                     <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
-                      {t("tournaments.killsShort")}
+                      {t("tournaments.mapScore")}
                     </th>
                     <th className="py-3 px-4 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-center">
-                      {t("tournaments.deathsShort")}
+                      {t("tournaments.mapsDiff")}
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
                   {standings.map((entry, idx) => {
                     const isUser = entry.team_id === userTeamId;
-                    const winRate = entry.played > 0 ? Math.round((entry.won / entry.played) * 100) : 0;
+                    const mapDiff = getStandingKillDiff(entry);
                     return (
                       <tr
                         key={entry.team_id}
@@ -468,16 +456,13 @@ export default function TournamentsTab({
                           {entry.won}
                         </td>
                         <td className="py-3 px-4 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">
-                          {winRate}%
-                        </td>
-                        <td className="py-3 px-4 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">
                           {entry.lost}
                         </td>
                         <td className="py-3 px-4 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">
-                          {entry.goals_for}
+                          {getStandingKillsFor(entry)}-{getStandingKillsAgainst(entry)}
                         </td>
-                        <td className="py-3 px-4 text-center text-sm text-gray-600 dark:text-gray-400 tabular-nums">
-                          {entry.goals_against}
+                        <td className={`py-3 px-4 text-center text-sm tabular-nums ${mapDiff > 0 ? "text-green-600 dark:text-green-400" : mapDiff < 0 ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"}`}>
+                          {mapDiff > 0 ? "+" : ""}{mapDiff}
                         </td>
                       </tr>
                     );

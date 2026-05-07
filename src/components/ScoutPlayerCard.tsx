@@ -32,12 +32,12 @@ export default function ScoutPlayerCard({ report, onPlayerClick }: ScoutPlayerCa
   const { t, i18n } = useTranslation();
 
   const attrs: AttrRow[] = [
-    { label: t("playerProfile.lolStats.mechanics"), value: report.mechanics ?? report.pace },
-    { label: t("playerProfile.lolStats.laning"), value: report.laning ?? report.shooting },
-    { label: t("playerProfile.lolStats.teamfighting"), value: report.teamfighting ?? report.passing },
-    { label: t("playerProfile.lolStats.macro"), value: report.macro ?? report.dribbling },
-    { label: t("playerProfile.lolStats.championPool"), value: report.champion_pool ?? report.defending },
-    { label: t("playerProfile.lolStats.discipline"), value: report.discipline ?? report.physical },
+    { label: t("playerProfile.lolStats.mechanics"), value: report.mechanics ?? report.pace ?? null },
+    { label: t("playerProfile.lolStats.laning"), value: report.laning ?? report.shooting ?? null },
+    { label: t("playerProfile.lolStats.teamfighting"), value: report.teamfighting ?? report.passing ?? null },
+    { label: t("playerProfile.lolStats.macro"), value: report.macro ?? report.dribbling ?? null },
+    { label: t("playerProfile.lolStats.championPool"), value: report.champion_pool ?? report.defending ?? null },
+    { label: t("playerProfile.lolStats.discipline"), value: report.discipline ?? report.physical ?? null },
   ];
 
   const discoveredCount = attrs.filter(a => a.value !== null).length;

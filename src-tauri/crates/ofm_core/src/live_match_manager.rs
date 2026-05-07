@@ -1,5 +1,5 @@
 mod team_builder;
-pub use team_builder::auto_select_set_pieces;
+pub use team_builder::auto_select_team_roles;
 use team_builder::build_team_with_bench;
 
 use log::info;
@@ -133,7 +133,7 @@ pub fn create_live_match(
 
     let config = MatchConfig::default();
 
-    let mut match_state = LiveMatchState::new(
+    let match_state = LiveMatchState::new(
         home_xi,
         away_xi,
         config,

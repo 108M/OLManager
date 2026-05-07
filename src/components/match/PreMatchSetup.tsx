@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { FixtureData, GameStateData } from "../../store/gameStore";
@@ -9,6 +9,11 @@ import PreMatchLineup, {
 } from "./PreMatchLineup";
 import MatchScreenLayout from "./MatchScreenLayout";
 import { ChevronRight } from "lucide-react";
+import OpponentIntelCard from "./OpponentIntelCard";
+import { buildOpponentIntel } from "./opponentIntelService";
+import teamsSeed from "../../../data/lec/draft/teams.json";
+import playersSeed from "../../../data/lec/draft/players.json";
+import championsSeed from "../../../data/lec/draft/champions.json";
 function normalizeKey(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -40,6 +45,7 @@ interface PreMatchSetupProps {
   currentFixture?: FixtureData | null;
   userSide: "Home" | "Away";
   onStart: () => void;
+  onCancel: () => void;
   onUpdateSnapshot: (snap: MatchSnapshot) => void;
 }
 
@@ -49,6 +55,7 @@ export default function PreMatchSetup({
   currentFixture,
   userSide,
   onStart,
+  onCancel,
   onUpdateSnapshot,
 }: PreMatchSetupProps) {
   const { t } = useTranslation();
@@ -59,7 +66,8 @@ export default function PreMatchSetup({
 
   const userTeam =
     userSide === "Home" ? snapshot.home_team : snapshot.away_team;
-  const oppTeam = userSide === "Home" ? snapshot.away_team : snapshot.home_team;
+  const oppTeam =
+    userSide === "Home" ? snapshot.away_team : snapshot.home_team;
 
   const homeTeamColor =
     gameState.teams.find((t) => t.id === snapshot.home_team.id)?.colors
@@ -67,7 +75,6 @@ export default function PreMatchSetup({
   const awayTeamColor =
     gameState.teams.find((t) => t.id === snapshot.away_team.id)?.colors
       ?.primary || "#6366f1";
-  const userColor = userSide === "Home" ? homeTeamColor : awayTeamColor;
   const fixtureLabel = currentFixture
     ? getFixtureDisplayLabel(t, currentFixture)
     : t("match.matchDay");
@@ -78,9 +85,33 @@ export default function PreMatchSetup({
   const userBench =
     userSide === "Home" ? snapshot.home_bench || [] : snapshot.away_bench || [];
 
+  const opponentIntel = useMemo(
+    () => {
+      const teamCatalog = ((teamsSeed as { data?: { teams?: Array<{ id: string; name: string }> } }).data?.teams ?? []);
+      const rosteredSeeds = ((playersSeed as { data?: { rostered_seeds?: Array<{ ign: string; teamId: string; role: string; champions: Array<Array<string | number>> }> } }).data?.rostered_seeds ?? []);
+      const freeAgentSeeds = ((playersSeed as { data?: { free_agent_seeds?: Array<{ ign: string; teamId: string; role: string; champions: Array<Array<string | number>> }> } }).data?.free_agent_seeds ?? []);
+      const playerCatalog = [...rosteredSeeds, ...freeAgentSeeds];
+      const rolesMap = ((championsSeed as { data?: { roles?: Record<string, string[]> } }).data?.roles ?? {});
+      const championCatalog = Object.entries(rolesMap).map(([name, roleHints]) => ({
+        id: String(name).replace(/[^A-Za-z0-9]/g, ""),
+        name,
+        roleHints,
+      }));
+
+      return buildOpponentIntel({
+        gameState,
+        opponentTeamName: oppTeam.name,
+        opponentPlayers: oppTeam.players.map((player) => ({ id: player.id, name: player.name })),
+        teamSeeds: teamCatalog,
+        playerSeeds: playerCatalog,
+        championSeeds: championCatalog,
+      });
+    },
+    [gameState, oppTeam.name, oppTeam.players],
+  );
   console.info("[PreMatchSetup] render", {
     awayTeam: snapshot.away_team.name,
-    benchCount: userBench.length,
+    benchCount: (snapshot.home_bench || []).length,
     homeTeam: snapshot.home_team.name,
     phase: snapshot.phase,
     playStyle: userTeam.play_style,
@@ -223,7 +254,13 @@ export default function PreMatchSetup({
             </div>
           </div>
 
-          <div className="flex justify-center mt-2">
+          <div className="flex justify-center gap-3 mt-2">
+            <button
+              onClick={onCancel}
+              className="flex items-center gap-2 px-6 py-3.5 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/40 rounded-xl font-heading font-bold uppercase tracking-wider text-sm text-red-700 dark:text-red-300 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              {t("common.cancel")}
+            </button>
             <button
               onClick={onStart}
               className="flex items-center gap-3 px-10 py-3.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 rounded-xl font-heading font-bold uppercase tracking-wider text-sm text-white shadow-lg shadow-primary-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -237,10 +274,10 @@ export default function PreMatchSetup({
     >
       <div className="max-w-5xl mx-auto px-6 py-6 flex flex-col gap-6">
         <PreMatchLineup
-          userTeam={userTeam}
-          userBench={userBench}
-          oppTeam={oppTeam}
-          userColor={userColor}
+          homeTeam={snapshot.home_team}
+          homeBench={snapshot.home_bench || []}
+          awayTeam={snapshot.away_team}
+          awayBench={snapshot.away_bench || []}
           homeTeamColor={homeTeamColor}
           awayTeamColor={awayTeamColor}
           userSide={userSide}
@@ -250,6 +287,7 @@ export default function PreMatchSetup({
           onSwap={handleSwap}
           onAutoSelect={handleAutoSelect}
         />
+        <OpponentIntelCard intel={opponentIntel} />
       </div>
     </MatchScreenLayout>
   );

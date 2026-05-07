@@ -76,6 +76,16 @@ function makePlayer(id: string, name: string, position = "ADC") {
     name,
     position,
     condition: 90,
+    fitness: 90,
+    mechanics: 70,
+    laning: 70,
+    teamfighting: 70,
+    macro_play: 70,
+    consistency: 70,
+    shotcalling: 60,
+    champion_pool: 70,
+    discipline: 70,
+    mental_resilience: 70,
     pace: 70,
     stamina: 70,
     strength: 60,
@@ -129,8 +139,8 @@ function makeSnapshot(overrides: Partial<MatchSnapshot> = {}): MatchSnapshot {
     home_subs_made: 0,
     away_subs_made: 0,
     max_subs: 0,
-    home_set_pieces: { free_kick_taker: null, corner_taker: null, penalty_taker: null, captain: null },
-    away_set_pieces: { free_kick_taker: null, corner_taker: null, penalty_taker: null, captain: null },
+    home_roles: { captain: null, shotcaller: null },
+    away_roles: { captain: null, shotcaller: null },
     substitutions: [],
     allows_extra_time: false,
     home_yellows: {},
@@ -153,7 +163,7 @@ function makeGameState(): GameStateData {
       satisfaction: 50,
       fan_approval: 50,
       team_id: "fnc",
-      career_stats: { matches: 0, wins: 0, draws: 0, losses: 0, trophies: 0 },
+      career_stats: { matches: 0, wins: 0, draws: 0, losses: 0, trophies: 0, matches_managed: 0, best_finish: null },
       career_history: [],
     },
     teams: [],
@@ -277,6 +287,28 @@ describe("PressConference LoL social content", () => {
     expect(lossQuestions.every((question) => question.id && question.question && question.responses.length > 0)).toBe(true);
     expect(uniqueQuestionIds(winQuestions)).toHaveLength(winQuestions.length);
     expect(uniqueQuestionIds(lossQuestions)).toHaveLength(lossQuestions.length);
+  });
+
+  it("does not surface loss-framed questions after a clear win", () => {
+    const questions = buildPressConferenceQuestions({
+      snapshot: makeSnapshot({
+        home_score: 3,
+        away_score: 0,
+        events: [
+          { minute: 5, event_type: "Kill", side: "Home", zone: "Top", player_id: "adc1", secondary_player_id: null },
+          { minute: 10, event_type: "Dragon", side: "Home", zone: "River", player_id: "adc1", secondary_player_id: null },
+          { minute: 16, event_type: "Baron", side: "Home", zone: "River", player_id: "sup1", secondary_player_id: null },
+        ],
+      }),
+      gameState: makeGameState(),
+      userSide: "Home",
+      t: (key: string) => key,
+      random: () => 0,
+    });
+
+    expect(questions.length).toBeGreaterThan(0);
+    expect(questions.every((question) => !question.id.toLowerCase().includes("loss"))).toBe(true);
+    expect(questions.every((question) => !question.id.toLowerCase().includes("underperformance"))).toBe(true);
   });
 
   it("selects the first-blood question from a real runtime event merged into the snapshot", () => {

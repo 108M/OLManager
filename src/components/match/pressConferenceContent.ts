@@ -40,6 +40,27 @@ interface Candidate {
   weight: number;
 }
 
+function isQuestionCoherentWithResult(candidate: Candidate, result: "win" | "loss"): boolean {
+  const required = new Set(candidate.question.requiredTags ?? []);
+  const id = candidate.question.id.toLowerCase();
+  if (result === "win") {
+    if (required.has("loss") || required.has("stomped") || required.has("underperformance") || required.has("objective_control")) {
+      return false;
+    }
+    if (id.includes("loss") || id.includes("underperformance") || id.includes("vision-control-loss")) {
+      return false;
+    }
+  }
+
+  if (result === "loss") {
+    if (required.has("win") || required.has("stomp") || required.has("objective_domination")) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 interface BuildPressConferenceQuestionsParams {
   snapshot: MatchSnapshot;
   gameState: GameStateData;
@@ -144,7 +165,7 @@ function snapshotToSummary(snapshot: MatchSnapshot, userSide: UserSide): Compati
           side: userRegistrySide,
           playerId: player.id,
           playerName: player.name,
-          role: player.position,
+          role: player.role ?? "",
           deaths,
           rating: deaths > 0 ? 4 : 6,
         };
@@ -153,7 +174,7 @@ function snapshotToSummary(snapshot: MatchSnapshot, userSide: UserSide): Compati
         side: enemyRegistrySide,
         playerId: player.id,
         playerName: player.name,
-        role: player.position,
+        role: player.role ?? "",
         deaths: deathsFor(snapshot.events, player.id),
         rating: 6,
       })),
@@ -307,7 +328,8 @@ export function buildPressConferenceQuestions({
     contextTags: context.tags,
     contextFacts: context.facts,
   });
-  const selectedCandidates = selectPressConferenceCandidates(candidates, random, recentQuestionIds);
+  const coherentCandidates = candidates.filter((candidate) => isQuestionCoherentWithResult(candidate, context.facts.result as "win" | "loss"));
+  const selectedCandidates = selectPressConferenceCandidates(coherentCandidates, random, recentQuestionIds);
 
   const fallbackResponses: PressResponse[] = [
     {

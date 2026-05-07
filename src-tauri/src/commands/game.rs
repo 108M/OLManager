@@ -1,13 +1,12 @@
 use chrono::{Datelike, TimeZone};
 use domain::message::{InboxMessage, MessageCategory, MessageContext, MessagePriority};
-use domain::player::{Player, PlayerAttributes, Position};
+use domain::player::{Player, PlayerAttributes};
 use domain::team::{
     AcademyLifecycle, AcademyMetadata, ErlAssignment, ErlAssignmentRule, Team, TeamKind,
 };
 use log::info;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
 use std::sync::OnceLock;
 use tauri::Manager as TauriManager;
 use tauri::State;
@@ -19,7 +18,10 @@ use ofm_core::clock::GameClock;
 use ofm_core::game::Game;
 use ofm_core::state::StateManager;
 
+use crate::application::game_setup::avatar;
+use crate::error::AppError;
 use crate::SaveManagerState;
+use validator::Validate;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TeamSelectionData {
@@ -29,6 +31,14 @@ pub struct TeamSelectionData {
 }
 
 const ACADEMY_FALLBACK_PHOTO: &str = "/player-photos/107455908655055017.png";
+
+fn calculate_age_on_date(birth_date: chrono::NaiveDate, as_of_date: chrono::NaiveDate) -> i32 {
+    let mut age = as_of_date.year() - birth_date.year();
+    if (as_of_date.month(), as_of_date.day()) < (birth_date.month(), birth_date.day()) {
+        age -= 1;
+    }
+    age
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct ExampleAcademyPlayerSeed {
@@ -539,7 +549,7 @@ pub(crate) fn bootstrap_example_academy_pool_from_example(
             };
 
             let attributes = build_attributes_from_seed(&seed);
-            let position = role_to_position(seed.role.as_deref());
+            let position = role_to_lol_role(seed.role.as_deref());
             let player_id = format!("{}-player-{}", academy_id, player_index + 1);
 
             let mut player = Player::new(
@@ -1515,15 +1525,15 @@ pub(crate) fn apply_lol_seed_ratings(players: &mut [Player]) {
 
         // Keep legacy schema compatibility but use a strict 1:1 mapping to LoL stats.
         // These are now treated as the source for LoL profile/training progression.
-        player.attributes.dribbling = seed.mechanics;
-        player.attributes.shooting = seed.laning;
-        player.attributes.teamwork = seed.teamfighting;
-        player.attributes.vision = seed.macro_play;
-        player.attributes.decisions = seed.consistency;
-        player.attributes.leadership = seed.shotcalling;
-        player.attributes.agility = seed.champion_pool;
-        player.attributes.composure = seed.discipline;
-        player.attributes.stamina = seed.mental_resilience;
+        player.attributes.mechanics = seed.mechanics;
+        player.attributes.laning = seed.laning;
+        player.attributes.teamfighting = seed.teamfighting;
+        player.attributes.macro_play = seed.macro_play;
+        player.attributes.consistency = seed.consistency;
+        player.attributes.shotcalling = seed.shotcalling;
+        player.attributes.champion_pool = seed.champion_pool;
+        player.attributes.discipline = seed.discipline;
+        player.attributes.mental_resilience = seed.mental_resilience;
 
         if let Some(potential_base) = potential_seed_for_player(&player.match_name) {
             player.potential_base = potential_base.min(99);
@@ -1537,13 +1547,86 @@ pub(crate) fn apply_lol_seed_ratings(players: &mut [Player]) {
     }
 }
 
+fn default_initial_contract_end_for_start_year(start_year: i32) -> String {
+    format!("{}-11-30", start_year + 1)
+}
+
 pub(crate) fn apply_default_initial_contract_end(players: &mut [Player]) {
-    const DEFAULT_INITIAL_CONTRACT_END: &str = "2025-12-20";
+    let default_initial_contract_end = default_initial_contract_end_for_start_year(2025);
 
     for player in players.iter_mut() {
         if player.contract_end.is_none() {
-            player.contract_end = Some(DEFAULT_INITIAL_CONTRACT_END.to_string());
+            player.contract_end = Some(default_initial_contract_end.clone());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{apply_default_initial_contract_end, default_initial_contract_end_for_start_year};
+    use domain::player::{Player, PlayerAttributes, Position};
+
+    fn default_attrs() -> PlayerAttributes {
+        PlayerAttributes {
+            pace: 60,
+            mental_resilience: 60,
+            strength: 60,
+            champion_pool: 60,
+            passing: 60,
+            laning: 60,
+            tackling: 60,
+            mechanics: 60,
+            defending: 60,
+            positioning: 60,
+            macro_play: 60,
+            consistency: 60,
+            discipline: 60,
+            aggression: 60,
+            teamfighting: 60,
+            shotcalling: 60,
+            handling: 60,
+            reflexes: 60,
+            aerial: 60,
+        }
+    }
+
+    fn player_with_contract(id: &str, contract_end: Option<&str>) -> Player {
+        let mut player = Player::new(
+            id.to_string(),
+            id.to_string(),
+            id.to_string(),
+            "2000-01-01".to_string(),
+            "ES".to_string(),
+            Position::Midfielder,
+            default_attrs(),
+        );
+        player.contract_end = contract_end.map(str::to_string);
+        player
+    }
+
+    #[test]
+    fn default_initial_contract_end_survives_first_next_season_friendlies() {
+        assert_eq!(
+            default_initial_contract_end_for_start_year(2025),
+            "2026-11-30"
+        );
+        assert_eq!(
+            default_initial_contract_end_for_start_year(2026),
+            "2027-11-30"
+        );
+    }
+
+    #[test]
+    fn apply_default_initial_contract_end_only_fills_missing_contracts() {
+        let mut players = vec![
+            player_with_contract("missing", None),
+            player_with_contract("existing", Some("2028-11-30")),
+        ];
+
+        apply_default_initial_contract_end(&mut players);
+
+        assert_eq!(players[0].contract_end.as_deref(), Some("2026-11-30"));
+        assert_eq!(players[1].contract_end.as_deref(), Some("2028-11-30"));
     }
 }
 
@@ -1555,15 +1638,15 @@ fn seed_is_free_agent(seed: &DraftPlayerSeed) -> bool {
         .unwrap_or(true)
 }
 
-fn role_to_position(role: Option<&str>) -> Position {
+fn role_to_lol_role(role: Option<&str>) -> domain::stats::LolRole {
     let key = role.map(normalize_seed_name).unwrap_or_default();
     match key.as_str() {
-        "top" => Position::Defender,
-        "jungle" => Position::Midfielder,
-        "mid" | "middle" => Position::AttackingMidfielder,
-        "bot" | "adc" | "bottom" => Position::Forward,
-        "support" | "sup" | "utility" => Position::DefensiveMidfielder,
-        _ => Position::Midfielder,
+        "top" => domain::stats::LolRole::Top,
+        "jungle" => domain::stats::LolRole::Jungle,
+        "mid" | "middle" => domain::stats::LolRole::Mid,
+        "bot" | "adc" | "bottom" => domain::stats::LolRole::Adc,
+        "support" | "sup" | "utility" => domain::stats::LolRole::Support,
+        _ => domain::stats::LolRole::Mid,
     }
 }
 
@@ -1633,21 +1716,21 @@ fn build_attributes_from_seed(seed: &DraftPlayerSeed) -> PlayerAttributes {
 
     PlayerAttributes {
         pace: clamp_stat((i16::from(mechanics) + i16::from(laning)) / 2),
-        stamina: mental_resilience,
+        mental_resilience: mental_resilience,
         strength: clamp_stat((i16::from(teamfighting) + i16::from(discipline)) / 2),
-        agility: champion_pool,
+        champion_pool: champion_pool,
         passing: clamp_stat((i16::from(macro_play) + i16::from(shotcalling)) / 2),
-        shooting: laning,
+        laning: laning,
         tackling: clamp_stat((i16::from(discipline) + i16::from(teamfighting)) / 2),
-        dribbling: mechanics,
+        mechanics: mechanics,
         defending,
         positioning: clamp_stat((i16::from(macro_play) + i16::from(consistency)) / 2),
-        vision: macro_play,
-        decisions: consistency,
-        composure: discipline,
+        macro_play: macro_play,
+        consistency: consistency,
+        discipline: discipline,
         aggression: clamp_stat((i16::from(teamfighting) + i16::from(mental_resilience)) / 2 - 4),
-        teamwork: teamfighting,
-        leadership: shotcalling,
+        teamfighting: teamfighting,
+        shotcalling: shotcalling,
         handling: 20,
         reflexes: 22,
         aerial: if role_key == "top" {
@@ -1676,7 +1759,7 @@ fn build_free_agent_player(seed: &DraftPlayerSeed, index: usize) -> Option<Playe
 
     let dob = seed.dob.clone().unwrap_or_else(|| "2002-01-01".to_string());
     let nationality = seed.nationality.clone().unwrap_or_else(|| "KR".to_string());
-    let position = role_to_position(seed.role.as_deref());
+    let position = role_to_lol_role(seed.role.as_deref());
     let attributes = build_attributes_from_seed(seed);
 
     let seed_key = normalize_seed_name(ign);
@@ -1807,11 +1890,12 @@ pub async fn start_new_game(
         return Err("Nationality is required.".to_string());
     }
 
-    // Validate DOB: must be a valid date and within a sensible range
+    let start_date = chrono::Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+
+    // Validate DOB: must be a valid date and within a sensible range for the game start date.
     let birth_date = chrono::NaiveDate::parse_from_str(&dob, "%Y-%m-%d")
         .map_err(|_| "Invalid date of birth. Use YYYY-MM-DD format.".to_string())?;
-    let today = chrono::Utc::now().date_naive();
-    let age = today.signed_duration_since(birth_date).num_days() / 365;
+    let age = calculate_age_on_date(birth_date, start_date.date_naive());
     if age > 99 {
         return Err("Invalid date of birth.".to_string());
     }
@@ -1826,8 +1910,6 @@ pub async fn start_new_game(
     manager.nickname = nickname;
     manager.avatar_path = avatar_path;
 
-    use chrono::TimeZone;
-    let start_date = chrono::Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
     let clock = GameClock::new(start_date);
 
     // Load world based on source
@@ -2047,33 +2129,56 @@ pub async fn load_game(
     save_id: String,
 ) -> Result<String, String> {
     info!("[cmd] load_game: save_id={}", save_id);
+
     let mut sm = sm_state
         .0
         .lock()
         .map_err(|e| format!("Lock error: {}", e))?;
+
+    info!("[cmd] load_game: loading game data from save");
     let mut game = sm.load_game(&save_id)?;
+    info!(
+        "[cmd] load_game: game loaded, players={}, teams={}",
+        game.players.len(),
+        game.teams.len()
+    );
+
     remove_free_agents_shadowed_by_academy(&mut game.players, &game.teams);
     inject_seed_free_agents(&mut game.players);
     ofm_core::champions::bootstrap_champion_state(&mut game);
+
+    info!("[cmd] load_game: loading stats state");
     let stats_state = sm.load_stats_state(&save_id)?;
+    info!("[cmd] load_game: stats state loaded");
+
     ofm_core::season_context::refresh_game_context(&mut game);
+    info!("[cmd] load_game: context refreshed");
 
     let mgr_name = game.manager.display_name();
+    info!("[cmd] load_game: manager={}", mgr_name);
 
+    info!("[cmd] load_game: setting state");
     state.set_save_id(save_id);
     state.set_game(game);
     state.set_stats_state(stats_state);
+    info!("[cmd] load_game: state set, returning manager name");
+
     Ok(mgr_name)
 }
 
 #[tauri::command]
 pub async fn get_active_game(state: State<'_, StateManager>) -> Result<Game, String> {
-    log::debug!("[cmd] get_active_game");
-    let mut game = state
-        .get_game(|g: &Game| g.clone())
-        .ok_or("No active game session".to_string())?;
-    ofm_core::champions::bootstrap_champion_state(&mut game);
-    state.set_game(game.clone());
+    log::info!("[cmd] get_active_game: start");
+    let game = state.get_game(|g: &Game| g.clone()).ok_or_else(|| {
+        log::error!("[cmd] get_active_game: no active game in state");
+        "No active game session".to_string()
+    })?;
+    log::info!(
+        "[cmd] get_active_game: found game with {} players, {} teams",
+        game.players.len(),
+        game.teams.len()
+    );
+    ofm_core::champions::bootstrap_champion_state(&mut game.clone());
     Ok(game)
 }
 
@@ -2158,23 +2263,39 @@ pub async fn save_manager_avatar(
     app_handle: tauri::AppHandle,
     filename: String,
     data: Vec<u8>,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     info!("[cmd] save_manager_avatar: filename={}", filename);
+
+    let safe_name = avatar::safe_avatar_filename(&filename)?;
 
     let app_data_dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+        .map_err(|e| AppError::Io(format!("Failed to get app data dir: {}", e)))?;
 
     let avatar_dir = app_data_dir.join("manager-avatars");
     std::fs::create_dir_all(&avatar_dir)
-        .map_err(|e| format!("Failed to create avatar directory: {}", e))?;
+        .map_err(|e| AppError::Io(format!("Failed to create avatar directory: {}", e)))?;
 
-    let file_path = avatar_dir.join(&filename);
-    std::fs::write(&file_path, &data).map_err(|e| format!("Failed to write avatar file: {}", e))?;
+    let file_path = avatar_dir.join(&safe_name);
+    // Extra safety: verify resolved path is within the avatar directory
+    let canonical = file_path
+        .canonicalize()
+        .map_err(|e| AppError::Io(format!("Failed to resolve avatar path: {}", e)))?;
+    let canonical_dir = avatar_dir
+        .canonicalize()
+        .map_err(|e| AppError::Io(format!("Failed to resolve avatar directory: {}", e)))?;
+    if !canonical.starts_with(&canonical_dir) {
+        return Err(AppError::Validation(
+            "Avatar path traversal detected".into(),
+        ));
+    }
+
+    std::fs::write(&file_path, &data)
+        .map_err(|e| AppError::Io(format!("Failed to write avatar file: {}", e)))?;
 
     info!("[cmd] save_manager_avatar: saved to {:?}", file_path);
-    Ok(file_path.to_string_lossy().to_string())
+    Ok(safe_name)
 }
 
 /// Load manager avatar as base64 data URL
@@ -2182,29 +2303,46 @@ pub async fn save_manager_avatar(
 pub async fn load_manager_avatar(
     app_handle: tauri::AppHandle,
     filename: String,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     info!("[cmd] load_manager_avatar: filename={}", filename);
+
+    let safe_name = avatar::safe_avatar_filename(&filename)?;
 
     let app_data_dir = app_handle
         .path()
         .app_data_dir()
-        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+        .map_err(|e| AppError::Io(format!("Failed to get app data dir: {}", e)))?;
 
-    let file_path = app_data_dir.join("manager-avatars").join(&filename);
-
-    if !file_path.exists() {
-        return Err(format!("Avatar file not found: {}", filename));
+    let avatar_dir = app_data_dir.join("manager-avatars");
+    let file_path = avatar_dir.join(&safe_name);
+    // Extra safety: verify resolved path is within the avatar directory
+    let canonical = file_path
+        .canonicalize()
+        .map_err(|e| AppError::Io(format!("Failed to resolve avatar path: {}", e)))?;
+    let canonical_dir = avatar_dir
+        .canonicalize()
+        .map_err(|e| AppError::Io(format!("Failed to resolve avatar directory: {}", e)))?;
+    if !canonical.starts_with(&canonical_dir) {
+        return Err(AppError::Validation(
+            "Avatar path traversal detected".into(),
+        ));
     }
 
-    let data =
-        std::fs::read(&file_path).map_err(|e| format!("Failed to read avatar file: {}", e))?;
+    if !file_path.exists() {
+        return Err(AppError::NotFound(format!(
+            "Avatar file not found: {}",
+            safe_name
+        )));
+    }
+
+    let data = std::fs::read(&file_path)
+        .map_err(|e| AppError::Io(format!("Failed to read avatar file: {}", e)))?;
 
     // Determine MIME type from extension
-    let mime_type = match filename.rsplit('.').next() {
+    let mime_type = match safe_name.rsplit('.').next() {
         Some("png") => "image/png",
         Some("jpg") | Some("jpeg") => "image/jpeg",
         Some("webp") => "image/webp",
-        Some("svg") => "image/svg+xml",
         _ => "application/octet-stream",
     };
 
@@ -2217,6 +2355,30 @@ pub async fn load_manager_avatar(
     Ok(data_url)
 }
 
+/// Validated input for updating manager profile fields.
+#[derive(Debug, validator::Validate)]
+struct ManagerProfileInput {
+    #[validate(length(max = 30))]
+    nickname: Option<String>,
+    #[validate(length(max = 30))]
+    first_name: Option<String>,
+    #[validate(length(max = 30))]
+    last_name: Option<String>,
+    #[validate(custom(function = "validate_date_format"))]
+    dob: Option<String>,
+    #[validate(length(max = 3))]
+    nationality: Option<String>,
+    avatar_path: Option<String>,
+}
+
+fn validate_date_format(date: &str) -> Result<(), validator::ValidationError> {
+    if chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d").is_ok() {
+        Ok(())
+    } else {
+        Err(validator::ValidationError::new("invalid_date_format"))
+    }
+}
+
 /// Update manager profile fields (nickname, name, dob, nationality, avatar)
 #[tauri::command]
 pub async fn update_manager_profile(
@@ -2227,34 +2389,48 @@ pub async fn update_manager_profile(
     dob: Option<String>,
     nationality: Option<String>,
     avatar_path: Option<String>,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     info!("[cmd] update_manager_profile");
+
+    // Validate input
+    let input = ManagerProfileInput {
+        nickname: nickname.clone(),
+        first_name: first_name.clone(),
+        last_name: last_name.clone(),
+        dob: dob.clone(),
+        nationality: nationality.clone(),
+        avatar_path: avatar_path.clone(),
+    };
+    input
+        .validate()
+        .map_err(|e| AppError::Validation(format!("Validation failed: {}", e)))?;
 
     let mut game = state
         .get_game(|g: &Game| g.clone())
-        .ok_or("No active game session".to_string())?;
+        .ok_or(AppError::Session("No active game session".into()))?;
 
     // Update only the provided fields (not None)
     if let Some(nick) = nickname {
-        game.manager.nickname = nick.trim().to_string();
+        let trimmed = nick.trim().to_string();
+        if !trimmed.is_empty() {
+            game.manager.nickname = trimmed;
+        }
     }
     if let Some(first) = first_name {
         let trimmed = first.trim().to_string();
-        if !trimmed.is_empty() && trimmed.len() <= 30 {
+        if !trimmed.is_empty() {
             game.manager.first_name = trimmed;
         }
     }
     if let Some(last) = last_name {
         let trimmed = last.trim().to_string();
-        if !trimmed.is_empty() && trimmed.len() <= 30 {
+        if !trimmed.is_empty() {
             game.manager.last_name = trimmed;
         }
     }
     if let Some(date) = dob {
-        // Validate date format
-        if chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d").is_ok() {
-            game.manager.date_of_birth = date;
-        }
+        // Already validated by validator custom function
+        game.manager.date_of_birth = date;
     }
     if let Some(nat) = nationality {
         let trimmed = nat.trim().to_string();
@@ -2271,4 +2447,25 @@ pub async fn update_manager_profile(
 
     info!("[cmd] update_manager_profile: completed");
     Ok(())
+}
+
+#[cfg(test)]
+mod player_age_tests {
+    use super::*;
+
+    #[test]
+    fn calculates_age_against_game_date_not_system_date() {
+        let birth_date = chrono::NaiveDate::from_ymd_opt(2000, 1, 2).unwrap();
+        let game_date = chrono::NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+
+        assert_eq!(calculate_age_on_date(birth_date, game_date), 24);
+    }
+
+    #[test]
+    fn increments_age_on_birthday() {
+        let birth_date = chrono::NaiveDate::from_ymd_opt(2000, 1, 1).unwrap();
+        let game_date = chrono::NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+
+        assert_eq!(calculate_age_on_date(birth_date, game_date), 25);
+    }
 }

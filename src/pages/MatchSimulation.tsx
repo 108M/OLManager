@@ -37,6 +37,7 @@ import {
 } from "../components/match/lol-prototype/backend/contract-v1";
 import { computeRoleModifiers, ROLE_ORDER, type DraftRole } from "../lib/lolTactics";
 import { getLolStaffEffectsForTeam } from "../lib/lolStaffEffects";
+import { buildLolScrimPrepPayload } from "../lib/lolScrimPrep";
 
 // ---------------------------------------------------------------------------
 // Multi-stage Match Day Orchestrator
@@ -83,18 +84,21 @@ const DEFAULT_LOL_TACTICS: LolTacticsData = {
   support_roaming: "Lane",
 };
 
-function attachLolTacticsToSnapshot(snapshot: MatchSnapshot, gameState: GameStateData): MatchSnapshot {
+function attachLolTacticsToSnapshot(
+  snapshot: MatchSnapshot,
+  gameState: GameStateData,
+  championSelections?: ChampionSelectionByPlayer | null,
+): MatchSnapshot {
   const homeTeam = gameState.teams.find((team) => team.id === snapshot.home_team.id);
   const awayTeam = gameState.teams.find((team) => team.id === snapshot.away_team.id);
 
-  const normalizePosition = (position: string) => position.toLowerCase().replace(/[^a-z]/g, "");
-  const positionToRole = (position: string): DraftRole | null => {
-    const normalized = normalizePosition(position);
-    if (normalized === "defender") return "TOP";
-    if (normalized === "midfielder") return "JUNGLE";
-    if (normalized === "attackingmidfielder") return "MID";
-    if (normalized === "forward") return "ADC";
-    if (normalized === "defensivemidfielder" || normalized === "goalkeeper") return "SUPPORT";
+  const engineRoleToDraftRole = (role: string): DraftRole | null => {
+    const normalized = role.toLowerCase();
+    if (normalized === "top") return "TOP";
+    if (normalized === "jungle") return "JUNGLE";
+    if (normalized === "mid") return "MID";
+    if (normalized === "adc") return "ADC";
+    if (normalized === "support") return "SUPPORT";
     return null;
   };
 
@@ -106,7 +110,7 @@ function attachLolTacticsToSnapshot(snapshot: MatchSnapshot, gameState: GameStat
     const byRole = new Map<DraftRole, MatchSnapshot["home_team"]["players"][number]>();
 
     players.forEach((player) => {
-      const role = positionToRole(player.position);
+      const role = engineRoleToDraftRole(player.role ?? "");
       if (!role || byRole.has(role)) return;
       byRole.set(role, player);
     });
@@ -148,6 +152,9 @@ function attachLolTacticsToSnapshot(snapshot: MatchSnapshot, gameState: GameStat
       home: homeStaffEffects,
       away: awayStaffEffects,
     },
+    // extra payload consumed by Rust sim v2: small scrim-derived execution signal
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    lol_scrim_prep: buildLolScrimPrepPayload(gameState, snapshot, championSelections),
   } as MatchSnapshot;
 }
 
@@ -624,7 +631,7 @@ function getSeriesSessionKey(fixtureId: string): string {
   return `fixture-draft-session-active:${fixtureId}`;
 }
 
-function hasActiveSeriesSession(fixtureId: string): boolean {
+export function hasActiveSeriesSession(fixtureId: string): boolean {
   if (typeof window === "undefined") return false;
 
   try {
@@ -667,6 +674,68 @@ function isCurrentRuntimeDraftSession(fixtureId: string): boolean {
 function readSeriesWins(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return 0;
   return Math.max(0, Math.floor(value));
+}
+
+function getTargetSeriesWins(seriesLength: 1 | 3 | 5): number {
+  return seriesLength === 1 ? 1 : seriesLength === 3 ? 2 : 3;
+}
+
+function hasTeamReachedSeriesTarget(
+  seriesLength: 1 | 3 | 5,
+  homeWins: number,
+  awayWins: number,
+): boolean {
+  const targetSeriesWins = getTargetSeriesWins(seriesLength);
+  return homeWins >= targetSeriesWins || awayWins >= targetSeriesWins;
+}
+
+function hasSeriesGamesSupportingScore(
+  seriesLength: 1 | 3 | 5,
+  homeWins: number,
+  awayWins: number,
+  games: StoredSeriesGameResult[],
+): boolean {
+  if (seriesLength <= 1) return true;
+
+  const totalWins = homeWins + awayWins;
+  const decidedGameCount = normalizeStoredSeriesGames(games).filter(
+    (entry) => entry.winnerSide === "blue" || entry.winnerSide === "red",
+  ).length;
+
+  return totalWins > 0 && totalWins <= seriesLength && decidedGameCount >= totalWins;
+}
+
+function hasEnoughSeriesGamesForScore(
+  seriesLength: 1 | 3 | 5,
+  homeWins: number,
+  awayWins: number,
+  games: StoredSeriesGameResult[],
+): boolean {
+  const totalWins = homeWins + awayWins;
+
+  return (
+    totalWins >= getTargetSeriesWins(seriesLength) &&
+    hasSeriesGamesSupportingScore(seriesLength, homeWins, awayWins, games)
+  );
+}
+
+function isSupportedSeriesComplete(
+  seriesLength: 1 | 3 | 5,
+  homeWins: number,
+  awayWins: number,
+  games: StoredSeriesGameResult[],
+): boolean {
+  return (
+    seriesLength <= 1 ||
+    (hasTeamReachedSeriesTarget(seriesLength, homeWins, awayWins) &&
+      hasEnoughSeriesGamesForScore(seriesLength, homeWins, awayWins, games))
+  );
+}
+
+function getNextSeriesGameIndex(games: StoredSeriesGameResult[]): number {
+  const normalizedGames = normalizeStoredSeriesGames(games);
+  const latestGameIndex = Math.max(0, ...normalizedGames.map((entry) => entry.gameIndex));
+  return latestGameIndex + 1;
 }
 
 function normalizeStoredSeriesGames(value: unknown): StoredSeriesGameResult[] {
@@ -750,12 +819,22 @@ export default function MatchSimulation() {
     if (!gameState || !snapshot) return;
     const utid = gameState.manager.team_id;
     if (!utid) {
+      console.warn("[MatchSimulation] resolveSide: no manager team_id, forcing spectator");
       setIsSpectator(true);
       return;
     }
-    if (snapshot.home_team.id === utid) setUserSide("Home");
-    else if (snapshot.away_team.id === utid) setUserSide("Away");
-    else setIsSpectator(true);
+    const isHome = snapshot.home_team.id === utid;
+    const isAway = snapshot.away_team.id === utid;
+    if (isHome) setUserSide("Home");
+    else if (isAway) setUserSide("Away");
+    else {
+      console.warn("[MatchSimulation] resolveSide: team_id mismatch", {
+        managerTeamId: utid,
+        homeTeamId: snapshot.home_team.id,
+        awayTeamId: snapshot.away_team.id,
+      });
+      setIsSpectator(true);
+    }
 
     // If mode is spectator, force spectator regardless of team
     if (effectiveMatchMode === "spectator") setIsSpectator(true);
@@ -765,12 +844,8 @@ export default function MatchSimulation() {
       homeTeamId: snapshot.home_team.id,
       matchMode,
       managerTeamId: utid,
-      resolvedUserSide:
-        snapshot.home_team.id === utid
-          ? "Home"
-          : snapshot.away_team.id === utid
-            ? "Away"
-            : null,
+      resolvedUserSide: isHome ? "Home" : isAway ? "Away" : null,
+      isSpectator: !isHome && !isAway,
     });
   }, [effectiveMatchMode, gameState, snapshot?.home_team.id, snapshot?.away_team.id]);
 
@@ -802,6 +877,7 @@ export default function MatchSimulation() {
           homeTeam: snap.home_team.name,
           phase: snap.phase,
         });
+        console.debug("[MatchSimulation] fetchSnapshot:full", JSON.parse(JSON.stringify(snap)));
         if (!isCancelled) {
           setSnapshot(snap);
         }
@@ -852,13 +928,6 @@ export default function MatchSimulation() {
       isCancelled = true;
     };
   }, [effectiveMatchMode, navigate, routeState?.fixtureIndex]);
-
-  // Skip pre-match for spectators
-  useEffect(() => {
-    if (isSpectator && stage === "prematch") {
-      setStage("draft");
-    }
-  }, [isSpectator, stage]);
 
   const currentFixture =
     gameState && snapshot
@@ -942,13 +1011,29 @@ export default function MatchSimulation() {
       return;
     }
 
-    const targetSeriesWins = seriesLength === 3 ? 2 : 3;
     const homeWins = readSeriesWins(stored.homeSeriesWins);
     const awayWins = readSeriesWins(stored.awaySeriesWins);
-    const isSeriesComplete =
-      homeWins >= targetSeriesWins || awayWins >= targetSeriesWins;
+    const storedSeriesGames = normalizeStoredSeriesGames(stored.seriesGames);
+    const isSeriesComplete = isSupportedSeriesComplete(seriesLength, homeWins, awayWins, storedSeriesGames);
 
     if (isSeriesComplete) {
+      markActiveSeriesSession(currentFixture.id);
+      try {
+        window.sessionStorage.setItem(getSeriesSessionKey(currentFixture.id), DRAFT_RUNTIME_SESSION_ID);
+      } catch {
+        // no-op
+      }
+      return;
+    }
+
+    const fixtureHomeWins = readSeriesWins(currentFixture.result?.home_wins) || readSeriesWins(currentFixture.result?.home_goals);
+    const fixtureAwayWins = readSeriesWins(currentFixture.result?.away_wins) || readSeriesWins(currentFixture.result?.away_goals);
+    const storedMatchesFixtureScore = fixtureHomeWins === homeWins && fixtureAwayWins === awayWins;
+    if (
+      currentFixture.status !== "Scheduled" &&
+      storedMatchesFixtureScore &&
+      hasSeriesGamesSupportingScore(seriesLength, homeWins, awayWins, storedSeriesGames)
+    ) {
       markActiveSeriesSession(currentFixture.id);
       try {
         window.sessionStorage.setItem(getSeriesSessionKey(currentFixture.id), DRAFT_RUNTIME_SESSION_ID);
@@ -968,7 +1053,15 @@ export default function MatchSimulation() {
     // We keep only completed series results.
     clearStoredFixtureDraftResult(currentFixture.id);
     clearActiveSeriesSession(currentFixture.id);
-  }, [currentFixture?.id, seriesLength]);
+  }, [
+    currentFixture?.id,
+    currentFixture?.result?.away_goals,
+    currentFixture?.result?.away_wins,
+    currentFixture?.result?.home_goals,
+    currentFixture?.result?.home_wins,
+    currentFixture?.status,
+    seriesLength,
+  ]);
 
   useEffect(() => {
     if (!currentFixture?.id) {
@@ -992,7 +1085,10 @@ export default function MatchSimulation() {
       : 0;
     const storedHomeWins = readSeriesWins(stored?.homeSeriesWins);
     const storedAwayWins = readSeriesWins(stored?.awaySeriesWins);
-    const persistedWinsEnabled = resumeFromFixtureResult;
+    const storedSeriesGames = normalizeStoredSeriesGames(stored?.seriesGames);
+    const storedSeriesIsComplete =
+      seriesLength > 1 && isSupportedSeriesComplete(seriesLength, storedHomeWins, storedAwayWins, storedSeriesGames);
+    const persistedWinsEnabled = resumeFromFixtureResult || storedSeriesIsComplete;
     const homeWins = persistedWinsEnabled ? Math.max(fromResultHome, storedHomeWins) : 0;
     const awayWins = persistedWinsEnabled ? Math.max(fromResultAway, storedAwayWins) : 0;
     const canReuseStoredState = seriesLength > 1 && resumeFromFixtureResult;
@@ -1070,8 +1166,8 @@ export default function MatchSimulation() {
   const renderSnapshot = activeSnapshot ?? snapshot;
   const renderSnapshotWithTactics = useMemo(() => {
     if (!renderSnapshot || !gameState) return renderSnapshot;
-    return attachLolTacticsToSnapshot(renderSnapshot, gameState);
-  }, [gameState, renderSnapshot]);
+    return attachLolTacticsToSnapshot(renderSnapshot, gameState, championSelections);
+  }, [championSelections, gameState, renderSnapshot]);
 
   const userSeriesWins =
     managerTeamId && currentFixture
@@ -1105,8 +1201,7 @@ export default function MatchSimulation() {
         : seriesHomeWins
       : seriesAwayWins;
 
-  const targetSeriesWins = seriesLength === 1 ? 1 : seriesLength === 3 ? 2 : 3;
-  const isSeriesComplete = seriesLength === 1 || userSeriesWins >= targetSeriesWins || opponentSeriesWins >= targetSeriesWins;
+  const isSeriesComplete = isSupportedSeriesComplete(seriesLength, seriesHomeWins, seriesAwayWins, seriesGames);
   const canOpenPressConference = seriesLength <= 1 || isSeriesComplete;
 
   // Callbacks for stage transitions
@@ -1152,7 +1247,7 @@ export default function MatchSimulation() {
           if (!pick) continue;
 
           const exact = players.find(
-            (entry) => !usedPlayerIds.has(entry.id) && inferRole(entry.position) === role,
+            (entry) => !usedPlayerIds.has(entry.id) && inferRole(entry.role ?? "") === role,
           );
           const slot = players[roleOrder[role]];
           const slotCandidate = slot && !usedPlayerIds.has(slot.id) ? slot : null;
@@ -1219,6 +1314,12 @@ export default function MatchSimulation() {
 
     const snapshotForResult = renderSnapshotWithTactics ?? snapshot;
     if (!snapshotForResult) {
+      if (seriesLength > 1) {
+        console.warn("[MatchSimulation] handleFullTime:blockedSeriesFinalizeWithoutSnapshot", { seriesLength });
+        setStage("draft_result");
+        return;
+      }
+
       void (async () => {
         const finalized = await finalizeMatch(buildLolMatchReport(finalRuntimeState));
         if (finalized) {
@@ -1228,7 +1329,10 @@ export default function MatchSimulation() {
       return;
     }
 
-    setSnapshot(mergeRuntimeEventsIntoSnapshot(snapshotForResult, finalRuntimeState.events));
+    // Keep the canonical fixture home/away snapshot intact. `snapshotForResult` can be
+    // side-swapped to render the user's selected LoL side, and storing that swapped
+    // shape as the base snapshot corrupts subsequent home/away series win tracking.
+    setSnapshot(mergeRuntimeEventsIntoSnapshot(snapshot ?? snapshotForResult, finalRuntimeState.events));
 
     const runtimeBasedResult = buildDraftResultFromRuntime({
       runtime: finalRuntimeState,
@@ -1259,7 +1363,7 @@ export default function MatchSimulation() {
       setDraftResultSimulation(null);
     }
 
-    const targetSeriesWins = seriesLength === 1 ? 1 : seriesLength === 3 ? 2 : 3;
+    const targetSeriesWins = getTargetSeriesWins(seriesLength);
     let homeSeriesWins = seriesHomeWins;
     let awaySeriesWins = seriesAwayWins;
     let userSeriesWins = 0;
@@ -1271,15 +1375,13 @@ export default function MatchSimulation() {
       const stored = readStoredFixtureDraftResult(currentFixture.id);
       const storedHomeWins = readSeriesWins(stored?.homeSeriesWins);
       const storedAwayWins = readSeriesWins(stored?.awaySeriesWins);
-      const resultHomeWins = readSeriesWins(currentFixture.result?.home_wins) || readSeriesWins(currentFixture.result?.home_goals);
-      const resultAwayWins = readSeriesWins(currentFixture.result?.away_wins) || readSeriesWins(currentFixture.result?.away_goals);
       const existingHomeWins = Math.min(
         targetSeriesWins,
-        Math.max(resultHomeWins, storedHomeWins, seriesHomeWins),
+        Math.max(storedHomeWins, seriesHomeWins),
       );
       const existingAwayWins = Math.min(
         targetSeriesWins,
-        Math.max(resultAwayWins, storedAwayWins, seriesAwayWins),
+        Math.max(storedAwayWins, seriesAwayWins),
       );
 
       const winnerTeamId =
@@ -1355,10 +1457,8 @@ export default function MatchSimulation() {
 
       setSeriesHomeWins(homeSeriesWins);
       setSeriesAwayWins(awaySeriesWins);
-      setSeriesGameIndex(homeSeriesWins + awaySeriesWins);
       setSeriesUsedChampionIds(nextSeriesUsedChampionIds);
 
-      const currentSeriesGameIndex = homeSeriesWins + awaySeriesWins;
       const nextSeriesGamesByIndex = new Map<number, StoredSeriesGameResult>();
       normalizeStoredSeriesGames(stored?.seriesGames).forEach((entry) => {
         nextSeriesGamesByIndex.set(entry.gameIndex, entry);
@@ -1366,6 +1466,7 @@ export default function MatchSimulation() {
       seriesGames.forEach((entry) => {
         nextSeriesGamesByIndex.set(entry.gameIndex, entry);
       });
+      const currentSeriesGameIndex = getNextSeriesGameIndex(Array.from(nextSeriesGamesByIndex.values()));
       nextSeriesGamesByIndex.set(currentSeriesGameIndex, {
         gameIndex: currentSeriesGameIndex,
         result: resultToPersist,
@@ -1375,6 +1476,7 @@ export default function MatchSimulation() {
         (left, right) => left.gameIndex - right.gameIndex,
       );
       setSeriesGames(nextSeriesGames);
+      setSeriesGameIndex(currentSeriesGameIndex);
 
       persistFixtureDraftResult(currentFixture.id, {
         snapshot: snapshotForResult,
@@ -1390,7 +1492,7 @@ export default function MatchSimulation() {
         seriesUsedChampionIds: nextSeriesUsedChampionIds,
       });
 
-      seriesComplete = homeSeriesWins >= targetSeriesWins || awaySeriesWins >= targetSeriesWins;
+      seriesComplete = isSupportedSeriesComplete(seriesLength, homeSeriesWins, awaySeriesWins, nextSeriesGames);
       if (seriesComplete && currentFixture?.id) {
         clearActiveSeriesSession(currentFixture.id);
       }
@@ -1599,18 +1701,42 @@ export default function MatchSimulation() {
 
   const handleFinishMatch = useCallback(async () => {
     console.info("[MatchSimulation] handleFinishMatch:start");
+    if (seriesLength > 1 && !isSeriesComplete) {
+      console.warn("[MatchSimulation] handleFinishMatch:blockedIncompleteSeries", {
+        seriesAwayWins,
+        seriesGameCount: seriesGames.length,
+        seriesHomeWins,
+        seriesLength,
+      });
+      return;
+    }
+
     const finalized = await finalizeMatch();
     if (finalized) {
       navigate("/dashboard");
     }
-  }, [finalizeMatch, navigate]);
+  }, [finalizeMatch, isSeriesComplete, navigate, seriesAwayWins, seriesGames.length, seriesHomeWins, seriesLength]);
 
   const handleDraftResultContinue = useCallback((nextUserSide?: "blue" | "red") => {
     if (nextUserSide) {
       setUserSelectedSide(nextUserSide);
     }
 
-    if (!isSeriesComplete && seriesLength > 1) {
+    const stored = currentFixture?.id ? readStoredFixtureDraftResult(currentFixture.id) : null;
+    const latestHomeWins = Math.max(seriesHomeWins, readSeriesWins(stored?.homeSeriesWins));
+    const latestAwayWins = Math.max(seriesAwayWins, readSeriesWins(stored?.awaySeriesWins));
+    const latestSeriesGames = normalizeStoredSeriesGames([
+      ...normalizeStoredSeriesGames(stored?.seriesGames),
+      ...seriesGames,
+    ]);
+    const seriesIsComplete = isSupportedSeriesComplete(
+      seriesLength,
+      latestHomeWins,
+      latestAwayWins,
+      latestSeriesGames,
+    );
+
+    if (!seriesIsComplete && seriesLength > 1) {
       setDraftPayload(null);
       setDraftResultSimulation(null);
       setChampionSelections(null);
@@ -1621,7 +1747,7 @@ export default function MatchSimulation() {
     }
 
     void handleFinishMatch();
-  }, [handleFinishMatch, isSeriesComplete, seriesLength]);
+  }, [currentFixture?.id, handleFinishMatch, seriesAwayWins, seriesGames, seriesHomeWins, seriesLength]);
 
   useEffect(() => {
     if (matchMode !== "delegate") return;
@@ -1649,6 +1775,9 @@ export default function MatchSimulation() {
       currentMinute: snap.current_minute,
       homePlayers: snap.home_team.players.length,
       phase: snap.phase,
+      homeRoles: snap.home_roles,
+      awayRoles: snap.away_roles,
+      hasLolMap: !!snap.lol_map,
     });
     setSnapshot(snap);
   }, []);
@@ -1677,8 +1806,11 @@ export default function MatchSimulation() {
   }
 
   // Render the current stage
-  switch (stage) {
+  console.debug("[MatchSimulation] render:stage", { stage, hasSnapshot: !!snapshot, hasGameState: !!gameState, userSide });
+  try {
+    switch (stage) {
     case "prematch":
+      console.debug("[MatchSimulation] render:prematch", { userSide, currentFixture });
       return (
         <PreMatchSetup
           snapshot={snapshot}
@@ -1686,11 +1818,13 @@ export default function MatchSimulation() {
           currentFixture={currentFixture}
           userSide={userSide || "Home"}
           onStart={handleStartMatch}
+          onCancel={() => navigate("/dashboard")}
           onUpdateSnapshot={handleSnapshotUpdate}
         />
       );
 
     case "draft":
+      console.debug("[MatchSimulation] render:draft", { userSide, allAi: effectiveMatchMode === "spectator" });
       return (
         <ChampionDraft
           snapshot={renderSnapshotWithTactics ?? renderSnapshot ?? snapshot}
@@ -1798,6 +1932,25 @@ export default function MatchSimulation() {
       );
 
     default:
+      console.warn("[MatchSimulation] unknown stage", { stage });
       return null;
+  }
+  } catch (renderError) {
+    console.error("[MatchSimulation] render:error", { stage, error: renderError });
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-navy-900 flex items-center justify-center p-8">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-2xl">
+          <h2 className="text-lg font-heading font-bold text-red-700 dark:text-red-400 mb-2">
+            Render Error
+          </h2>
+          <p className="text-red-600 dark:text-red-300 text-sm font-mono whitespace-pre-wrap">
+            {String(renderError)}
+          </p>
+          <p className="text-gray-500 dark:text-gray-400 text-xs mt-4">
+            Stage: {stage}
+          </p>
+        </div>
+      </div>
+    );
   }
 }

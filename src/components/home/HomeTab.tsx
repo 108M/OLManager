@@ -1,4 +1,4 @@
-import type { GameStateData } from "../../store/gameStore";
+import { compareStandingsByLolScore, type GameStateData } from "../../store/gameStore";
 import { normalizeTrainingFocus } from "../../lib/trainingFocus";
 import { Card, CardHeader, CardBody } from "../ui";
 import { formatDateShort } from "../../lib/helpers";
@@ -10,11 +10,15 @@ import {
 } from "../../utils/backendI18n";
 import {
   getHomeRosterOverview,
+  getLeagueDigestArticles,
+  getNextOpponentWidgetData,
   getOnboardingCompletionState,
   getRecentResultsForTeam,
 } from "./HomeTab.helpers";
 import HomeLeaguePositionCard from "./HomeLeaguePositionCard";
+import HomeLeagueDigestCard from "./HomeLeagueDigestCard";
 import HomeLatestNewsCard from "./HomeLatestNewsCard";
+import HomeNextOpponentCard from "./HomeNextOpponentCard";
 import HomeRosterLineupCard from "./HomeRosterLineupCard";
 import HomeRecentResultsCard from "./HomeRecentResultsCard";
 import HomeRecentMessagesCard from "./HomeRecentMessagesCard";
@@ -36,6 +40,7 @@ import HomeOnboardingChecklistCard from "./HomeOnboardingChecklistCard";
 import JobOpportunitiesCard from "./JobOpportunitiesCard";
 import HomeThisWeekCard from "./HomeThisWeekCard";
 import HomeFinancesCard from "./HomeFinancesCard";
+import HomeTodayPlanCard from "./HomeTodayPlanCard";
 
 interface HomeTabProps {
   gameState: GameStateData;
@@ -115,14 +120,18 @@ export default function HomeTab({
           : t("season.windowClosed");
 
   const sortedStandings = league
-    ? [...league.standings].sort(
-      (a, b) =>
-        b.points - a.points ||
-        b.goals_for - b.goals_against - (a.goals_for - a.goals_against),
-    )
+    ? [...league.standings]
+        .sort(compareStandingsByLolScore)
+        .map((standing) => ({
+          ...standing,
+          goals_for: standing.goals_for ?? standing.kills_for ?? 0,
+          goals_against: standing.goals_against ?? standing.kills_against ?? 0,
+        }))
     : [];
 
   const recentResults = getRecentResultsForTeam(gameState, myTeam?.id ?? null);
+  const nextOpponent = getNextOpponentWidgetData(gameState);
+  const leagueDigest = getLeagueDigestArticles(gameState).map(resolveNewsArticle);
 
   // Training schedule
   const schedule = myTeam?.training_schedule || "Balanced";
@@ -188,7 +197,7 @@ export default function HomeTab({
   const completedSteps = onboardingState.completedSteps;
 
   return (
-    <div className="max-w-6xl mx-auto flex flex-col gap-5">
+    <div className="w-full flex flex-col gap-5">
       {myTeam && isPreseason && (
         <HomeSeasonStatusCard
           phase={seasonContext.phase}
@@ -215,27 +224,36 @@ export default function HomeTab({
         )}
 
       {myTeam ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Next Match Card */}
-          <Card accent="primary" className="md:col-span-2">
-            <CardHeader>{t("home.nextMatch")}</CardHeader>
-            <CardBody>
-              <NextMatchDisplay gameState={gameState} />
-            </CardBody>
-          </Card>
-
-          {/* League Position */}
-          <HomeLeaguePositionCard
-            isPreseason={isPreseason}
-            phase={seasonContext.phase}
-            seasonStartLabel={seasonStartLabel}
-            league={league}
-            sortedStandings={sortedStandings}
-            teams={gameState.teams}
-            myTeamId={myTeam.id}
+        <>
+          <HomeTodayPlanCard
+            gameState={gameState}
+            team={myTeam}
+            onGameUpdate={onGameUpdate}
             onNavigate={onNavigate}
           />
-        </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Next Match Card */}
+            <Card accent="primary" className="md:col-span-2">
+              <CardHeader>{t("home.nextMatch")}</CardHeader>
+              <CardBody>
+                <NextMatchDisplay gameState={gameState} />
+              </CardBody>
+            </Card>
+
+            {/* League Position */}
+            <HomeLeaguePositionCard
+              isPreseason={isPreseason}
+              phase={seasonContext.phase}
+              seasonStartLabel={seasonStartLabel}
+              league={league}
+              sortedStandings={sortedStandings}
+              teams={gameState.teams}
+              myTeamId={myTeam.id}
+              onNavigate={onNavigate}
+            />
+          </div>
+        </>
       ) : (
         <>
           <HomeLeaguePositionCard
@@ -262,6 +280,19 @@ export default function HomeTab({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <HomeThisWeekCard gameState={gameState} />
             <HomeFinancesCard team={myTeam} onNavigate={onNavigate} />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <HomeNextOpponentCard
+              nextOpponent={nextOpponent}
+              lang={lang}
+              onNavigate={onNavigate}
+            />
+            <HomeLeagueDigestCard
+              articles={leagueDigest}
+              lang={lang}
+              onNavigate={onNavigate}
+            />
           </div>
 
           <HomeUnavailablePlayersCard

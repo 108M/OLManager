@@ -1,16 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
-// Position — mirrors domain::player::Position but kept independent
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum Position {
-    Goalkeeper,
-    Defender,
-    Midfielder,
-    Forward,
-}
+// Re-export LolRole from live_match module for use in this crate
+pub use crate::live_match::LolRole;
 
 // ---------------------------------------------------------------------------
 // PlayStyle — mirrors domain::team::PlayStyle
@@ -34,48 +25,23 @@ pub enum PlayStyle {
 pub struct PlayerData {
     pub id: String,
     pub name: String,
-    pub position: Position,
-    #[serde(default)]
-    pub lol_role: Option<String>,
+    /// Player's LoL role (Top, Jungle, Mid, Adc, Support)
+    pub role: LolRole,
     pub condition: u8, // 0-100
     /// Long-term physical shape (0-100). Multiplies stamina depletion rate in-match.
     #[serde(default = "default_fitness")]
     pub fitness: u8,
 
-    // Physical
-    pub pace: u8,
-    pub stamina: u8,
-    pub strength: u8,
-    #[serde(default = "default_engine_attr")]
-    pub agility: u8,
-
-    // Technical
-    pub passing: u8,
-    pub shooting: u8,
-    pub tackling: u8,
-    pub dribbling: u8,
-    pub defending: u8,
-
-    // Mental
-    pub positioning: u8,
-    pub vision: u8,
-    pub decisions: u8,
-    #[serde(default = "default_engine_attr")]
-    pub composure: u8,
-    #[serde(default = "default_engine_attr")]
-    pub aggression: u8,
-    #[serde(default = "default_engine_attr")]
-    pub teamwork: u8,
-    #[serde(default = "default_engine_attr")]
-    pub leadership: u8,
-
-    // Goalkeeper
-    #[serde(default = "default_engine_attr")]
-    pub handling: u8,
-    #[serde(default = "default_engine_attr")]
-    pub reflexes: u8,
-    #[serde(default = "default_engine_attr")]
-    pub aerial: u8,
+    // LoL Attributes
+    pub mechanics: u8,
+    pub laning: u8,
+    pub teamfighting: u8,
+    pub macro_play: u8,
+    pub consistency: u8,
+    pub shotcalling: u8,
+    pub champion_pool: u8,
+    pub discipline: u8,
+    pub mental_resilience: u8,
 
     // Traits (string names matching domain::player::PlayerTrait variants)
     #[serde(default)]
@@ -91,20 +57,18 @@ fn default_fitness() -> u8 {
 }
 
 impl PlayerData {
-    /// Overall rating (simple mean of core 11 attributes).
+    /// Overall rating (simple mean of 9 visible LoL stats, matching calculate_lol_ovr).
     pub fn overall(&self) -> f64 {
-        (self.pace as f64
-            + self.stamina as f64
-            + self.strength as f64
-            + self.passing as f64
-            + self.shooting as f64
-            + self.tackling as f64
-            + self.dribbling as f64
-            + self.defending as f64
-            + self.positioning as f64
-            + self.vision as f64
-            + self.decisions as f64)
-            / 11.0
+        (self.mechanics as f64
+            + self.laning as f64
+            + self.teamfighting as f64
+            + self.macro_play as f64
+            + self.consistency as f64
+            + self.shotcalling as f64
+            + self.champion_pool as f64
+            + self.discipline as f64
+            + self.mental_resilience as f64)
+            / 9.0
     }
 
     /// Effective rating accounting for current condition (0-100).
@@ -127,58 +91,55 @@ pub struct TeamData {
 }
 
 impl TeamData {
-    /// Count players by position.
-    pub fn count_position(&self, pos: Position) -> usize {
-        self.players.iter().filter(|p| p.position == pos).count()
+    /// Count players by role.
+    pub fn count_role(&self, role: LolRole) -> usize {
+        self.players.iter().filter(|p| p.role == role).count()
     }
 
-    /// Average of a specific attribute among players in the given position.
-    pub fn position_attr_avg(&self, pos: Position, attr_fn: fn(&PlayerData) -> u8) -> f64 {
-        let players: Vec<_> = self.players.iter().filter(|p| p.position == pos).collect();
+    /// Average of a specific attribute among players in the given role.
+    pub fn role_attr_avg(&self, role: LolRole, attr_fn: fn(&PlayerData) -> u8) -> f64 {
+        let players: Vec<_> = self.players.iter().filter(|p| p.role == role).collect();
         if players.is_empty() {
             return 40.0; // fallback
         }
         players.iter().map(|p| attr_fn(p) as f64).sum::<f64>() / players.len() as f64
     }
 
-    /// Composite defense rating (from defenders + goalkeeper).
+    /// Composite defense rating (from Top + Support).
     pub fn defense_rating(&self) -> f64 {
-        let def_avg = self.position_attr_avg(Position::Defender, |p| {
-            ((p.defending as u16 + p.tackling as u16 + p.positioning as u16 + p.strength as u16)
-                / 4) as u8
+        let top_avg = self.role_attr_avg(LolRole::Top, |p| {
+            ((p.consistency as u16 + p.discipline as u16 + p.mental_resilience as u16) / 3) as u8
         });
-        let gk_avg = self.position_attr_avg(Position::Goalkeeper, |p| {
-            ((p.positioning as u16 + p.decisions as u16 + p.strength as u16 + p.pace as u16) / 4)
-                as u8
+        let support_avg = self.role_attr_avg(LolRole::Support, |p| {
+            ((p.macro_play as u16 + p.teamfighting as u16 + p.discipline as u16) / 3) as u8
         });
-        def_avg * 0.7 + gk_avg * 0.3
+        top_avg * 0.7 + support_avg * 0.3
     }
 
-    /// Composite midfield rating.
-    pub fn midfield_rating(&self) -> f64 {
-        self.position_attr_avg(Position::Midfielder, |p| {
-            ((p.passing as u16 + p.vision as u16 + p.decisions as u16 + p.stamina as u16) / 4) as u8
-        })
-    }
-
-    /// Composite attack rating (from forwards + midfielders).
+    /// Composite attack rating (from ADC + Mid).
     pub fn attack_rating(&self) -> f64 {
-        let fwd_avg = self.position_attr_avg(Position::Forward, |p| {
-            ((p.shooting as u16 + p.dribbling as u16 + p.pace as u16 + p.positioning as u16) / 4)
-                as u8
+        let adc_avg = self.role_attr_avg(LolRole::Adc, |p| {
+            ((p.mechanics as u16 + p.laning as u16 + p.teamfighting as u16) / 3) as u8
         });
-        let mid_contrib = self.position_attr_avg(Position::Midfielder, |p| {
-            ((p.shooting as u16 + p.passing as u16 + p.vision as u16) / 3) as u8
+        let mid_contrib = self.role_attr_avg(LolRole::Mid, |p| {
+            ((p.mechanics as u16 + p.teamfighting as u16 + p.consistency as u16) / 3) as u8
         });
-        fwd_avg * 0.75 + mid_contrib * 0.25
+        adc_avg * 0.75 + mid_contrib * 0.25
     }
 
-    /// Goalkeeper save rating.
-    pub fn goalkeeper_rating(&self) -> f64 {
-        self.position_attr_avg(Position::Goalkeeper, |p| {
-            ((p.positioning as u16 + p.decisions as u16 + p.pace as u16 + p.strength as u16) / 4)
-                as u8
-        })
+    /// Support contribution rating (Vision + Teamwork).
+    pub fn support_rating(&self) -> f64 {
+        self.role_attr_avg(LolRole::Support, |p| p.champion_pool)
+    }
+
+    pub fn midfield_rating(&self) -> f64 {
+        let mid_avg = self.role_attr_avg(LolRole::Mid, |p| {
+            ((p.macro_play as u16 + p.shotcalling as u16 + p.laning as u16) / 3) as u8
+        });
+        let jg_avg = self.role_attr_avg(LolRole::Jungle, |p| {
+            ((p.macro_play as u16 + p.shotcalling as u16 + p.mental_resilience as u16) / 3) as u8
+        });
+        mid_avg * 0.6 + jg_avg * 0.4
     }
 }
 
@@ -192,39 +153,56 @@ pub struct MatchConfig {
     pub home_advantage: f64,
     /// Base probability that a shot from the box is on target (0.0–1.0).
     pub shot_accuracy_base: f64,
-    /// Base probability that an on-target shot beats the keeper (0.0–1.0).
-    pub goal_conversion_base: f64,
     /// Per-minute fatigue factor applied to condition.
     pub fatigue_per_minute: f64,
-    /// Probability of a foul on any defensive action (0.0–1.0).
-    pub foul_probability: f64,
-    /// Probability a foul results in a yellow card.
-    pub yellow_card_probability: f64,
-    /// Probability a yellow-card foul is upgraded to red (second yellow or serious foul).
-    pub red_card_probability: f64,
-    /// Probability a foul in the box results in a penalty.
-    pub penalty_probability: f64,
-    /// Minutes of stoppage time per half (0 = none).
-    pub stoppage_time_max: u8,
-    /// Probability of an injury per foul event.
-    pub injury_probability: f64,
+    /// Random swing applied in objective control comparisons.
+    #[serde(default = "default_objective_swing_min")]
+    pub objective_swing_min: f64,
+    #[serde(default = "default_objective_swing_max")]
+    pub objective_swing_max: f64,
+    /// Per-tick structure damage random range.
+    #[serde(default = "default_structure_damage_min")]
+    pub structure_damage_min: f64,
+    #[serde(default = "default_structure_damage_max")]
+    pub structure_damage_max: f64,
+    /// Late-game combat scaling cap.
+    #[serde(default = "default_late_game_damage_scale")]
+    pub late_game_damage_scale: f64,
 }
 
 impl Default for MatchConfig {
     fn default() -> Self {
         Self {
-            home_advantage: 1.08,
+            home_advantage: 1.03,
             shot_accuracy_base: 0.45,
-            goal_conversion_base: 0.30,
             fatigue_per_minute: 0.20,
-            foul_probability: 0.12,
-            yellow_card_probability: 0.30,
-            red_card_probability: 0.04,
-            penalty_probability: 0.08,
-            stoppage_time_max: 4,
-            injury_probability: 0.03,
+            objective_swing_min: default_objective_swing_min(),
+            objective_swing_max: default_objective_swing_max(),
+            structure_damage_min: default_structure_damage_min(),
+            structure_damage_max: default_structure_damage_max(),
+            late_game_damage_scale: default_late_game_damage_scale(),
         }
     }
+}
+
+fn default_objective_swing_min() -> f64 {
+    0.97
+}
+
+fn default_objective_swing_max() -> f64 {
+    1.06
+}
+
+fn default_structure_damage_min() -> f64 {
+    9.0
+}
+
+fn default_structure_damage_max() -> f64 {
+    15.0
+}
+
+fn default_late_game_damage_scale() -> f64 {
+    1.50
 }
 
 // ---------------------------------------------------------------------------

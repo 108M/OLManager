@@ -18,8 +18,18 @@ import type { GameStateData } from "../../store/gameStore";
 const makePlayer = (overrides: Partial<EnginePlayerData> = {}): EnginePlayerData => ({
   id: "p1",
   name: "Test Player",
-  position: "Midfielder",
+  role: "Midfielder",
   condition: 100,
+  fitness: 100,
+  mechanics: 70,
+  laning: 70,
+  teamfighting: 70,
+  macro_play: 70,
+  consistency: 70,
+  shotcalling: 50,
+  champion_pool: 70,
+  discipline: 50,
+  mental_resilience: 50,
   pace: 70, stamina: 70, strength: 70, agility: 70,
   passing: 70, shooting: 70, tackling: 70, dribbling: 70,
   defending: 70, positioning: 70, vision: 70, decisions: 70,
@@ -55,8 +65,8 @@ const makeSnapshot = (overrides: Partial<MatchSnapshot> = {}): MatchSnapshot => 
   home_subs_made: 0,
   away_subs_made: 0,
   max_subs: 3,
-  home_set_pieces: { free_kick_taker: null, corner_taker: null, penalty_taker: null, captain: null },
-  away_set_pieces: { free_kick_taker: null, corner_taker: null, penalty_taker: null, captain: null },
+  home_roles: { captain: null, shotcaller: null },
+  away_roles: { captain: null, shotcaller: null },
   substitutions: [],
   allows_extra_time: false,
   home_yellows: {},
@@ -157,16 +167,16 @@ describe("phaseLabel", () => {
 });
 
 // ---------------------------------------------------------------------------
-// calcOvr (match version — averages all attrs)
+// calcOvr (match version — uses 9 visible LoL stats)
 // ---------------------------------------------------------------------------
 
 describe("calcOvr (match)", () => {
-  it("averages all attribute values", () => {
-    expect(calcOvr({ pace: 80, shooting: 60, passing: 70 })).toBe(70);
+  it("averages the 9 visible LoL stats", () => {
+    expect(calcOvr({ mechanics: 70, laning: 60, teamfighting: 70, macro_play: 70, consistency: 70, shotcalling: 70, champion_pool: 70, discipline: 70, mental_resilience: 70 })).toBe(69); // 620/9 = 68.9 → 69
   });
 
-  it("rounds to nearest integer", () => {
-    expect(calcOvr({ pace: 71, shooting: 72 })).toBe(72); // 143/2 = 71.5 → 72
+  it("ignores non-visible stats like pace", () => {
+    expect(calcOvr({ mechanics: 80, laning: 80 })).toBe(80);
   });
 
   it("returns 0 for empty attributes", () => {

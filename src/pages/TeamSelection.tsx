@@ -24,11 +24,12 @@ function avg(...values: number[]): number {
 function lolRoleFromPlayer(player: PlayerData): "top" | "jungle" | "mid" | "bottom" | "support" | "unknown" {
   const position = (player.natural_position || player.position || "").toLowerCase();
 
-  if (position.includes("defender") && !position.includes("midfielder")) return "top";
-  if (position === "midfielder") return "jungle";
-  if (position.includes("attackingmidfielder")) return "mid";
-  if (position.includes("forward")) return "bottom";
-  if (position.includes("defensivemidfielder") || position.includes("goalkeeper")) return "support";
+  // position is already a LolRole ("TOP", "JUNGLE", "MID", "ADC", "SUPPORT")
+  if (position === "top") return "top";
+  if (position === "jungle") return "jungle";
+  if (position === "mid") return "mid";
+  if (position === "adc" || position === "bot" || position === "bottom") return "bottom";
+  if (position === "support" || position === "sup") return "support";
   return "unknown";
 }
 
@@ -38,13 +39,13 @@ function roleBonus(player: PlayerData): number {
     case "top":
       return avg(a.strength, a.defending, a.positioning) * 0.08;
     case "jungle":
-      return avg(a.vision, a.decisions, a.passing) * 0.08;
+      return avg(a.macro_play, a.consistency, a.passing) * 0.08;
     case "mid":
-      return avg(a.dribbling, a.shooting, a.decisions) * 0.08;
+      return avg(a.mechanics, a.laning, a.consistency) * 0.08;
     case "bottom":
-      return avg(a.shooting, a.pace, a.positioning) * 0.08;
+      return avg(a.laning, a.pace, a.positioning) * 0.08;
     case "support":
-      return avg(a.passing, a.vision, a.teamwork) * 0.08;
+      return avg(a.passing, a.macro_play, a.teamfighting) * 0.08;
     default:
       return 0;
   }
@@ -53,10 +54,10 @@ function roleBonus(player: PlayerData): number {
 function lolPlayerOvr(player: PlayerData): number {
   const a = player.attributes;
 
-  const mechanics = avg(a.dribbling, a.agility, a.pace, a.composure);
-  const macro = avg(a.vision, a.decisions, a.positioning, a.passing);
-  const teamfight = avg(a.teamwork, a.stamina, a.composure, a.strength);
-  const consistency = avg(a.decisions, a.vision, a.positioning, a.composure);
+  const mechanics = avg(a.mechanics, a.champion_pool, a.pace, a.discipline);
+  const macro = avg(a.macro_play, a.consistency, a.positioning, a.passing);
+  const teamfight = avg(a.teamfighting, a.mental_resilience, a.discipline, a.strength);
+  const consistency = avg(a.consistency, a.macro_play, a.positioning, a.discipline);
 
   const weighted =
     mechanics * 0.34 +

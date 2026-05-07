@@ -86,8 +86,9 @@ pub struct FixtureChampionPickInput {
 fn finish_live_match_internal(
     state: &StateManager,
     lol_report: Option<LolSimMatchReportInput>,
+    locale: Option<&str>,
 ) -> Result<FinishLiveMatchResponse, String> {
-    finish_live_match_service(state, lol_report)
+    finish_live_match_service(state, lol_report, locale)
 }
 
 fn apply_team_talk_internal(
@@ -138,10 +139,12 @@ pub fn get_match_snapshot(state: State<'_, StateManager>) -> Result<engine::Matc
 /// Finish the live match: generate report, update game state, clean up.
 #[tauri::command]
 pub fn finish_live_match(
+    app_handle: tauri::AppHandle,
     state: State<'_, StateManager>,
     lol_report: Option<LolSimMatchReportInput>,
 ) -> Result<FinishLiveMatchResponse, String> {
-    finish_live_match_internal(&state, lol_report)
+    let settings = crate::commands::settings::get_settings(app_handle).unwrap_or_default();
+    finish_live_match_internal(&state, lol_report, Some(settings.language.as_str()))
 }
 
 #[tauri::command]
@@ -150,11 +153,13 @@ pub fn record_fixture_champion_picks(
     fixture_id: String,
     winner_team_id: String,
     picks: Vec<FixtureChampionPickInput>,
+    bans: Vec<String>,
 ) -> Result<Game, String> {
     info!(
-        "[cmd] record_fixture_champion_picks: fixture={}, picks={}",
+        "[cmd] record_fixture_champion_picks: fixture={}, picks={}, bans={}",
         fixture_id,
-        picks.len()
+        picks.len(),
+        bans.len()
     );
 
     let mut game = state
@@ -174,6 +179,8 @@ pub fn record_fixture_champion_picks(
         return Err("Fixture has no completed result yet".to_string());
     }
 
+    let bans_json = serde_json::to_string(&bans).unwrap_or_default();
+
     state.with_stats_state(|stats| {
         for record in stats
             .player_matches
@@ -184,6 +191,7 @@ pub fn record_fixture_champion_picks(
                 .iter()
                 .find(|pick| pick.player_id == record.player_id)
                 .map(|pick| pick.champion_id.clone());
+            record.bans_json = bans_json.clone();
             record.result = if record.team_id == winner_team_id {
                 MatchOutcome::Win
             } else {
@@ -440,21 +448,21 @@ mod tests {
 
         PlayerAttributes {
             pace: 65,
-            stamina: 65,
+            mental_resilience: 65,
             strength: 65,
-            agility: 65,
+            champion_pool: 65,
             passing: 65,
-            shooting: if is_goalkeeper { 30 } else { 65 },
+            laning: if is_goalkeeper { 30 } else { 65 },
             tackling: if is_goalkeeper { 30 } else { 65 },
-            dribbling: if is_goalkeeper { 30 } else { 65 },
+            mechanics: if is_goalkeeper { 30 } else { 65 },
             defending: if is_goalkeeper { 30 } else { 65 },
             positioning: 65,
-            vision: 65,
-            decisions: 65,
-            composure: 65,
+            macro_play: 65,
+            consistency: 65,
+            discipline: 65,
             aggression: 50,
-            teamwork: 65,
-            leadership: 50,
+            teamfighting: 65,
+            shotcalling: 50,
             handling: if is_goalkeeper { 75 } else { 20 },
             reflexes: if is_goalkeeper { 75 } else { 20 },
             aerial: 60,
@@ -692,8 +700,8 @@ mod tests {
             .iter_mut()
             .find(|player| player.id == "t1_mid0")
             .unwrap();
-        composed.attributes.composure = 90;
-        composed.attributes.leadership = 90;
+        composed.attributes.discipline = 90;
+        composed.attributes.shotcalling = 90;
         composed.attributes.aggression = 20;
         composed.morale_core.manager_trust = 80;
 
@@ -702,8 +710,8 @@ mod tests {
             .iter_mut()
             .find(|player| player.id == "t1_fwd0")
             .unwrap();
-        volatile.attributes.composure = 20;
-        volatile.attributes.leadership = 20;
+        volatile.attributes.discipline = 20;
+        volatile.attributes.shotcalling = 20;
         volatile.attributes.aggression = 90;
         volatile.morale_core.manager_trust = 25;
         volatile.morale_core.unresolved_issue = Some(PlayerIssue {

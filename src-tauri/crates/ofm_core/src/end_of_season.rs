@@ -132,6 +132,14 @@ fn prize_money_for_position(position: u32) -> i64 {
         .unwrap_or(150_000)
 }
 
+fn refresh_hiring_cycle_budgets(team: &mut domain::team::Team) {
+    // Minimal hook: after split settlements (prize/objectives), rebalance next-cycle
+    // planning budgets from current treasury so offseason hiring decisions have
+    // coherent funds available without a full finance redesign.
+    team.wage_budget = ((team.finance.max(0) as f64) * 0.06).round() as i64;
+    team.transfer_budget = ((team.finance.max(0) as f64) * 0.22).round() as i64;
+}
+
 /// Process end-of-season: record history, compute awards, reset stats, generate next season.
 /// Returns a summary struct for the frontend to display.
 pub fn process_end_of_season(game: &mut Game) -> EndOfSeasonSummary {
@@ -214,8 +222,8 @@ pub fn process_end_of_season(game: &mut Game) -> EndOfSeasonSummary {
         user_won: user_standing.as_ref().map(|s| s.won).unwrap_or(0),
         user_drawn: user_standing.as_ref().map(|s| s.drawn).unwrap_or(0),
         user_lost: user_standing.as_ref().map(|s| s.lost).unwrap_or(0),
-        user_goals_for: user_standing.as_ref().map(|s| s.goals_for).unwrap_or(0),
-        user_goals_against: user_standing.as_ref().map(|s| s.goals_against).unwrap_or(0),
+        user_kills_for: user_standing.as_ref().map(|s| s.kills_for).unwrap_or(0),
+        user_kills_against: user_standing.as_ref().map(|s| s.kills_against).unwrap_or(0),
         golden_boot_player: awards
             .golden_boot
             .first()
@@ -252,8 +260,8 @@ pub fn process_end_of_season(game: &mut Game) -> EndOfSeasonSummary {
                 won: standing.won,
                 drawn: standing.drawn,
                 lost: standing.lost,
-                goals_for: standing.goals_for,
-                goals_against: standing.goals_against,
+                kills_for: standing.kills_for,
+                kills_against: standing.kills_against,
             });
             // Reset form
             team.form.clear();
@@ -273,6 +281,8 @@ pub fn process_end_of_season(game: &mut Game) -> EndOfSeasonSummary {
                     kind: FinancialTransactionKind::PrizeMoney,
                 });
             }
+
+            refresh_hiring_cycle_budgets(team);
         }
     }
 
@@ -292,7 +302,7 @@ pub fn process_end_of_season(game: &mut Game) -> EndOfSeasonSummary {
                 team_id,
                 team_name,
                 appearances: player.stats.appearances,
-                goals: player.stats.goals,
+                goals: player.stats.kills,
                 assists: player.stats.assists,
             });
         }
@@ -305,7 +315,6 @@ pub fn process_end_of_season(game: &mut Game) -> EndOfSeasonSummary {
         let total_matches = standing.won + standing.drawn + standing.lost;
         game.manager.career_stats.matches_managed += total_matches;
         game.manager.career_stats.wins += standing.won;
-        game.manager.career_stats.draws += standing.drawn;
         game.manager.career_stats.losses += standing.lost;
         if user_position == 1 {
             game.manager.career_stats.trophies += 1;
@@ -607,8 +616,8 @@ pub struct EndOfSeasonSummary {
     pub user_won: u32,
     pub user_drawn: u32,
     pub user_lost: u32,
-    pub user_goals_for: u32,
-    pub user_goals_against: u32,
+    pub user_kills_for: u32,
+    pub user_kills_against: u32,
     pub golden_boot_player: String,
     pub golden_boot_goals: u32,
     pub poty_player: String,

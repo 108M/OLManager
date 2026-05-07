@@ -4,7 +4,7 @@ use super::definitions::{WorldData, WorldDatabaseInfo};
 /// If `data_dir` is provided, tries to load definition files from that directory.
 pub fn generate_world_data(data_dir: Option<&std::path::Path>) -> WorldData {
     let (mut teams, mut players, mut staff) = super::generate_world(data_dir);
-    crate::football_identity::upgrade_world_football_identities(
+    crate::identity_upgrade::upgrade_world_football_identities(
         &mut teams,
         &mut players,
         &mut staff,
@@ -26,7 +26,7 @@ pub fn generate_world_data(data_dir: Option<&std::path::Path>) -> WorldData {
 pub fn load_world_from_json(json: &str) -> Result<WorldData, String> {
     let mut world: WorldData =
         serde_json::from_str(json).map_err(|e| format!("Failed to parse world database: {}", e))?;
-    crate::football_identity::upgrade_world_football_identities(
+    crate::identity_upgrade::upgrade_world_football_identities(
         &mut world.teams,
         &mut world.players,
         &mut world.staff,
@@ -37,7 +37,7 @@ pub fn load_world_from_json(json: &str) -> Result<WorldData, String> {
 /// Serialise a `WorldData` to a pretty-printed JSON string.
 pub fn export_world_to_json(world: &WorldData) -> Result<String, String> {
     let mut normalized = world.clone();
-    crate::football_identity::upgrade_world_football_identities(
+    crate::identity_upgrade::upgrade_world_football_identities(
         &mut normalized.teams,
         &mut normalized.players,
         &mut normalized.staff,
@@ -116,8 +116,8 @@ mod tests {
                             "training_schedule": "Balanced",
                             "founded_year": 1900,
                             "colors": { "primary": "#ffffff", "secondary": "#000000" },
-                            "starting_xi_ids": [],
-                            "match_roles": { "captain": null, "vice_captain": null, "penalty_taker": null, "free_kick_taker": null, "corner_taker": null },
+                            "active_lineup_ids": [],
+                            "match_roles": { "captain": null, "shotcaller": null },
                             "form": [],
                             "history": []
                         }
@@ -150,7 +150,7 @@ mod tests {
                             "contract_end": null,
                             "wage": 0,
                             "market_value": 0,
-                            "stats": { "appearances": 0, "goals": 0, "assists": 0, "clean_sheets": 0, "yellow_cards": 0, "red_cards": 0, "avg_rating": 0.0, "minutes_played": 0 },
+                            "stats": { "appearances": 0, "goals": 0, "assists": 0, "clean_sheets": 0, "avg_rating": 0.0, "minutes_played": 0 },
                             "career": [],
                             "training_focus": null,
                             "transfer_listed": false,
@@ -165,16 +165,24 @@ mod tests {
 
         let world = load_world_from_json(json).unwrap();
 
-        assert_eq!(world.teams[0].football_nation, "ENG");
-        assert_eq!(world.players[0].football_nation, "ENG");
         assert_eq!(world.players[0].birth_country, None);
+    }
+
+    #[test]
+    fn active_lec_world_seed_does_not_contain_football_nation() {
+        let json = include_str!("../../../../databases/lec_world.json");
+
+        // Assert: active seed data must NOT contain football_nation keys
+        assert!(
+            !json.contains("football_nation"),
+            "Active LEC world seed should not contain legacy 'football_nation' field"
+        );
     }
 
     #[test]
     fn export_world_to_json_writes_canonical_football_identity_fields() {
         let mut world = generate_world_data(None);
         world.teams[0].country = "GB".to_string();
-        world.teams[0].football_nation.clear();
 
         if let Some(player) = world
             .players
@@ -182,13 +190,12 @@ mod tests {
             .find(|player| player.team_id.as_deref() == Some(world.teams[0].id.as_str()))
         {
             player.nationality = "GB".to_string();
-            player.football_nation.clear();
             player.birth_country = None;
         }
 
         let json = export_world_to_json(&world).unwrap();
         let reparsed: WorldData = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(reparsed.teams[0].football_nation, "ENG");
+        assert_eq!(reparsed.teams[0].country, "GB");
     }
 }

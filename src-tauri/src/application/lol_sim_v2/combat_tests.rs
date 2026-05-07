@@ -84,6 +84,47 @@ fn smite_executes_low_hp_dragon_for_jungler() {
 }
 
 #[test]
+fn jungle_micro_damage_no_longer_has_role_penalty() {
+    let top = test_champion("top-blue", "blue", "TOP", "top", Vec2 { x: 0.40, y: 0.40 });
+    let jgl = test_champion("jgl-blue", "blue", "JGL", "top", Vec2 { x: 0.42, y: 0.40 });
+
+    assert_eq!(
+        champion_micro_damage_multiplier(&top),
+        champion_micro_damage_multiplier(&jgl)
+    );
+}
+
+#[test]
+fn jungler_retaliates_against_recent_attacker_even_with_camps_up() {
+    let mut entities = HashMap::new();
+    entities.insert(
+        "wolves-blue".to_string(),
+        test_neutral_timer("wolves-blue", Vec2 { x: 0.25, y: 0.25 }, true),
+    );
+    let neutral = NeutralTimersRuntime {
+        dragon_soul_unlocked: false,
+        elder_unlocked: false,
+        entities,
+        extra: HashMap::new(),
+    };
+
+    let mut jgl = test_champion("jgl-blue", "blue", "JGL", "top", Vec2 { x: 0.50, y: 0.50 });
+    jgl.attack_range = 0.08;
+    jgl.last_damaged_by_champion_id = Some("top-red".to_string());
+    jgl.last_damaged_by_champion_at = LANE_COMBAT_UNLOCK_AT + 1.0;
+    jgl.last_damaged_at = LANE_COMBAT_UNLOCK_AT + 1.0;
+
+    let enemy = test_champion("top-red", "red", "TOP", "top", Vec2 { x: 0.55, y: 0.50 });
+
+    let mut runtime = test_runtime(vec![jgl, enemy], vec![], vec![], neutral);
+    let enemy_hp_before = runtime.champions[1].hp;
+
+    resolve_champion_combat(&mut runtime);
+
+    assert!(runtime.champions[1].hp < enemy_hp_before);
+}
+
+#[test]
 fn ultimate_burst_casts_when_level_six_enemy_nearby() {
     let neutral = NeutralTimersRuntime {
         dragon_soul_unlocked: false,
@@ -347,7 +388,13 @@ fn global_ultimate_requires_team_vision() {
 
 #[test]
 fn pick_combat_target_without_entities_returns_none() {
-    let runtime = RuntimeState::default();
+    let neutral = NeutralTimersRuntime {
+        dragon_soul_unlocked: false,
+        elder_unlocked: false,
+        entities: HashMap::new(),
+        extra: HashMap::new(),
+    };
+    let runtime = test_runtime(vec![], vec![], vec![], neutral.clone());
     let neutral = decode_neutral_for_tests(&runtime);
     let selected = pick_combat_target(&runtime, 0, runtime.time_sec, &neutral);
     assert!(selected.is_none());

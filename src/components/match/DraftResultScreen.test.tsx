@@ -7,13 +7,13 @@ import type { MatchSnapshot } from "./types";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string, options?: string | { defaultValue?: string }) => {
+    t: (key: string, options?: string | { defaultValue?: string; [key: string]: unknown }) => {
       if (typeof options === "string") {
         return options;
       }
 
       if (options && typeof options === "object" && "defaultValue" in options) {
-        return options.defaultValue ?? key;
+        return String(options.defaultValue ?? key).replace(/{{(\w+)}}/g, (_, name) => String(options[name] ?? ""));
       }
 
       return key;
@@ -78,7 +78,7 @@ function createResult(overrides: Partial<DraftMatchResult> = {}): DraftMatchResu
 const snapshot = {
   home_team: { id: "team-1", name: "Alpha FC", players: [] },
   away_team: { id: "team-2", name: "Beta FC", players: [] },
-} as MatchSnapshot;
+} as unknown as MatchSnapshot;
 
 describe("DraftResultScreen", () => {
   it("renders game tabs and switches displayed game result", () => {
@@ -142,6 +142,112 @@ describe("DraftResultScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Game 1" }));
 
     expect(screen.getAllByText("Alpha Mid").length).toBeGreaterThan(0);
+  });
+
+  it("shows the next game label while a Bo3 series is unfinished", () => {
+    const gameOne = createResult({ winnerSide: "blue" });
+    const gameTwo = createResult({ winnerSide: "red" });
+    const onContinue = vi.fn();
+
+    render(
+      <DraftResultScreen
+        snapshot={snapshot}
+        controlledSide="blue"
+        result={gameTwo}
+        seriesGames={[
+          { gameIndex: 1, result: gameOne, winnerSide: gameOne.winnerSide },
+          { gameIndex: 2, result: gameTwo, winnerSide: gameTwo.winnerSide },
+        ]}
+        seriesLength={3}
+        seriesGameIndex={2}
+        userSeriesWins={1}
+        opponentSeriesWins={1}
+        onContinue={onContinue}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Game 3/3" })).toBeInTheDocument();
+  });
+
+  it("shows Game 2/3 instead of final continue when a Bo3 has only one played map", () => {
+    const gameOne = createResult({ winnerSide: "blue" });
+
+    render(
+      <DraftResultScreen
+        snapshot={snapshot}
+        controlledSide="blue"
+        result={gameOne}
+        seriesGames={[
+          { gameIndex: 1, result: gameOne, winnerSide: gameOne.winnerSide },
+        ]}
+        seriesLength={3}
+        seriesGameIndex={2}
+        userSeriesWins={2}
+        opponentSeriesWins={0}
+        onPressConference={vi.fn()}
+        onContinue={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/match\.draftResult\.series \(Bo3\) · 1 - 0/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Game 2/3" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Press Conference" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
+  });
+
+  it("does not show a stale next game label after all Bo3 games were played", () => {
+    const gameOne = createResult({ winnerSide: "red" });
+    const gameTwo = createResult({ winnerSide: "blue" });
+    const gameThree = createResult({ winnerSide: "blue" });
+
+    render(
+      <DraftResultScreen
+        snapshot={snapshot}
+        controlledSide="blue"
+        result={gameThree}
+        seriesGames={[
+          { gameIndex: 1, result: gameOne, winnerSide: gameOne.winnerSide },
+          { gameIndex: 2, result: gameTwo, winnerSide: gameTwo.winnerSide },
+          { gameIndex: 3, result: gameThree, winnerSide: gameThree.winnerSide },
+        ]}
+        seriesLength={3}
+        seriesGameIndex={1}
+        userSeriesWins={1}
+        opponentSeriesWins={1}
+        onContinue={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Game 2/3" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
+  });
+
+  it("keeps the final Bo3 series score visible when upstream win props are reset", () => {
+    const gameOne = createResult({ winnerSide: "red" });
+    const gameTwo = createResult({ winnerSide: "blue" });
+    const gameThree = createResult({ winnerSide: "blue" });
+
+    render(
+      <DraftResultScreen
+        snapshot={snapshot}
+        controlledSide="blue"
+        result={gameThree}
+        seriesGames={[
+          { gameIndex: 1, result: gameOne, winnerSide: gameOne.winnerSide },
+          { gameIndex: 2, result: gameTwo, winnerSide: gameTwo.winnerSide },
+          { gameIndex: 3, result: gameThree, winnerSide: gameThree.winnerSide },
+        ]}
+        seriesLength={3}
+        seriesGameIndex={3}
+        userSeriesWins={0}
+        opponentSeriesWins={0}
+        onContinue={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/match\.draftResult\.series \(Bo3\) · 2 - 1/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Game 3/3" })).not.toBeInTheDocument();
   });
 
   it("plots blue gold advantage above center and red advantage below center", () => {
@@ -211,5 +317,27 @@ describe("DraftResultScreen", () => {
       "72,43",
       "94,57",
     ]);
+  });
+
+  it("shows scrim prep influence when the runtime snapshot carried prep signal", () => {
+    render(
+      <DraftResultScreen
+        snapshot={{
+          ...snapshot,
+          lol_scrim_prep: {
+            home: { preparation: 2, focus: "Macro", comfortByPlayer: { "blue-top": 1 } },
+            away: { preparation: 0, focus: null, comfortByPlayer: {} },
+          },
+        }}
+        controlledSide="blue"
+        result={createResult()}
+        onContinue={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Scrim prep carried into the match")).toBeInTheDocument();
+    expect(screen.getByText("Opponent prep +2")).toBeInTheDocument();
+    expect(screen.getByText("Champion comfort +1")).toBeInTheDocument();
+    expect(screen.getByText("Focus: macro")).toBeInTheDocument();
   });
 });

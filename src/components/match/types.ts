@@ -3,6 +3,7 @@
 import type { TFunction } from "i18next";
 import type { LolRole } from "../../store/gameStore";
 import type { LolStaffEffectsData } from "../../lib/lolStaffEffects";
+import type { LolScrimPrepPayload } from "../../lib/lolScrimPrep";
 
 export interface MatchEvent {
   minute: number;
@@ -108,29 +109,41 @@ export interface LolMapState {
 export interface EnginePlayerData {
   id: string;
   name: string;
-  position: string;
-  lol_role?: string | null;
+  role?: string;
+  /** @deprecated Legacy football test fixture field. */
+  position?: string;
   condition: number;
-  pace: number;
-  stamina: number;
-  strength: number;
-  agility: number;
-  passing: number;
-  shooting: number;
-  tackling: number;
-  dribbling: number;
-  defending: number;
-  positioning: number;
-  vision: number;
-  decisions: number;
-  composure: number;
-  aggression: number;
-  teamwork: number;
-  leadership: number;
-  handling: number;
-  reflexes: number;
-  aerial: number;
+  fitness: number;
+  mechanics: number;
+  laning: number;
+  teamfighting: number;
+  macro_play: number;
+  consistency: number;
+  shotcalling: number;
+  champion_pool: number;
+  discipline: number;
+  mental_resilience: number;
   traits: string[];
+  /** @deprecated Legacy football attributes retained for fixture compatibility. */
+  pace?: number;
+  stamina?: number;
+  strength?: number;
+  agility?: number;
+  passing?: number;
+  shooting?: number;
+  tackling?: number;
+  dribbling?: number;
+  defending?: number;
+  positioning?: number;
+  vision?: number;
+  decisions?: number;
+  composure?: number;
+  aggression?: number;
+  teamwork?: number;
+  leadership?: number;
+  handling?: number;
+  reflexes?: number;
+  aerial?: number;
 }
 
 export interface EngineTeamData {
@@ -141,11 +154,9 @@ export interface EngineTeamData {
   players: EnginePlayerData[];
 }
 
-export interface SetPieceTakers {
-  free_kick_taker: string | null;
-  corner_taker: string | null;
-  penalty_taker: string | null;
+export interface TeamRoles {
   captain: string | null;
+  shotcaller: string | null;
 }
 
 export interface SubstitutionRecord {
@@ -172,8 +183,8 @@ export interface MatchSnapshot {
   home_subs_made: number;
   away_subs_made: number;
   max_subs: number;
-  home_set_pieces: SetPieceTakers;
-  away_set_pieces: SetPieceTakers;
+  home_roles: TeamRoles;
+  away_roles: TeamRoles;
   substitutions: SubstitutionRecord[];
   allows_extra_time: boolean;
   home_yellows: Record<string, number>;
@@ -184,6 +195,7 @@ export interface MatchSnapshot {
     home: LolStaffEffectsData;
     away: LolStaffEffectsData;
   };
+  lol_scrim_prep?: LolScrimPrepPayload;
 }
 
 export interface MinuteResult {

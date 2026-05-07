@@ -4,17 +4,15 @@ use domain::league::{
     CompactMatchEvent, CompactMatchReport, CompactTeamMatchStats, FixtureStatus, MatchEndReason,
     MatchResult,
 };
-use domain::player::{
-    PlayerIssue, PlayerIssueCategory, PlayerPromiseKind, Position as DomainPosition,
-};
+use domain::player::{PlayerIssue, PlayerIssueCategory, PlayerPromiseKind};
 use domain::stats::{
     LolRole, MatchOutcome, PlayerMatchStatsRecord, StatsState, TeamMatchStatsRecord, TeamSide,
 };
 use log::debug;
 
-fn compact_team_stats(stats: &engine::TeamStats) -> CompactTeamMatchStats {
+fn compact_team_stats(stats: &engine::TeamStats, possession_pct: u8) -> CompactTeamMatchStats {
     CompactTeamMatchStats {
-        possession_pct: 0,
+        possession_pct,
         kills: stats.kills,
         deaths: stats.deaths,
         gold_earned: stats.gold_earned,
@@ -50,8 +48,11 @@ fn compact_match_report(report: &engine::MatchReport) -> CompactMatchReport {
     CompactMatchReport {
         total_minutes: report.total_minutes.into(),
         game_duration_seconds: report.game_duration_seconds,
-        home_stats: compact_team_stats(&report.home_stats),
-        away_stats: compact_team_stats(&report.away_stats),
+        home_stats: compact_team_stats(&report.home_stats, report.home_possession.round() as u8),
+        away_stats: compact_team_stats(
+            &report.away_stats,
+            (100.0 - report.home_possession).round().clamp(0.0, 100.0) as u8,
+        ),
         events,
     }
 }
@@ -326,6 +327,7 @@ fn build_stats_state_capture(
                 damage_dealt: stats.damage_dealt,
                 vision_score: stats.vision_score,
                 wards_placed: stats.wards_placed,
+                bans_json: String::new(),
             })
         })
         .collect();
@@ -380,19 +382,43 @@ fn build_stats_state_capture(
 fn apply_player_stats(
     game: &mut Game,
     report: &engine::MatchReport,
-    home_team_id: &str,
-    away_team_id: &str,
+    _home_team_id: &str,
+    _away_team_id: &str,
 ) {
     for player in game.players.iter_mut() {
         if let Some(ps) = report.player_stats.get(&player.id) {
+            let minutes_played = if ps.duration_seconds > 0 {
+                ps.duration_seconds / 60
+            } else {
+                u32::from(ps.minutes_played)
+            };
+            let kills = if ps.kills > 0 {
+                ps.kills
+            } else {
+                report
+                    .kill_feed
+                    .iter()
+                    .filter(|kill| kill.killer_id == player.id)
+                    .count() as u16
+            };
             player.stats.appearances += 1;
-            player.stats.goals += ps.kills as u32;
+            player.stats.kills += kills as u32;
             player.stats.assists += ps.assists as u32;
-            player.stats.minutes_played += ps.duration_seconds / 60;
+            player.stats.minutes_played += minutes_played;
+            player.stats.shots += ps.shots as u32;
+            player.stats.shots_on_target += ps.shots_on_target as u32;
+            player.stats.passes_completed += ps.passes_completed as u32;
+            player.stats.passes_attempted += ps.passes_attempted as u32;
+            player.stats.tackles_won += ps.tackles_won as u32;
+            player.stats.interceptions += ps.interceptions as u32;
 
-            let match_rating = 6.0 + ((ps.kills + ps.assists) as f32 * 0.35)
-                - (ps.deaths as f32 * 0.25)
-                + ((ps.damage_dealt as f32 / 10_000.0).min(1.5));
+            let match_rating = if ps.rating > 0.0 {
+                ps.rating
+            } else {
+                6.0 + ((kills + ps.assists) as f32 * 0.35)
+                    - (ps.deaths as f32 * 0.25)
+                    + ((ps.damage_dealt as f32 / 10_000.0).min(1.5))
+            };
             if player.stats.appearances == 1 {
                 player.stats.avg_rating = match_rating.clamp(0.0, 10.0);
             } else {
@@ -401,16 +427,15 @@ fn apply_player_stats(
                     (player.stats.avg_rating * (n - 1.0) + match_rating.clamp(0.0, 10.0)) / n;
             }
 
-            if matches!(player.position, DomainPosition::Goalkeeper) {
-                let tid = player.team_id.as_deref().unwrap_or("");
-                let conceded_zero = if tid == home_team_id {
-                    report.away_stats.kills == 0
-                } else if tid == away_team_id {
-                    report.home_stats.kills == 0
+            if player.id.ends_with("_gk") {
+                let conceded = if player.team_id.as_deref() == Some(_home_team_id) {
+                    report.away_wins
+                } else if player.team_id.as_deref() == Some(_away_team_id) {
+                    report.home_wins
                 } else {
-                    false
+                    1
                 };
-                if conceded_zero {
+                if minutes_played > 0 && conceded == 0 {
                     player.stats.clean_sheets += 1;
                 }
             }
@@ -569,25 +594,26 @@ fn apply_lol_profile_progression(
             *delta = (*delta).clamp(-2, 2);
         }
 
-        player.attributes.dribbling =
-            clamp_attr_range(i16::from(player.attributes.dribbling) + d_dribbling);
-        player.attributes.agility =
-            clamp_attr_range(i16::from(player.attributes.agility) + d_agility);
-        player.attributes.shooting =
-            clamp_attr_range(i16::from(player.attributes.shooting) + d_shooting);
+        player.attributes.mechanics =
+            clamp_attr_range(i16::from(player.attributes.mechanics) + d_dribbling);
+        player.attributes.champion_pool =
+            clamp_attr_range(i16::from(player.attributes.champion_pool) + d_agility);
+        player.attributes.laning =
+            clamp_attr_range(i16::from(player.attributes.laning) + d_shooting);
         player.attributes.positioning =
             clamp_attr_range(i16::from(player.attributes.positioning) + d_positioning);
-        player.attributes.teamwork =
-            clamp_attr_range(i16::from(player.attributes.teamwork) + d_teamwork);
-        player.attributes.stamina =
-            clamp_attr_range(i16::from(player.attributes.stamina) + d_stamina);
-        player.attributes.vision = clamp_attr_range(i16::from(player.attributes.vision) + d_vision);
-        player.attributes.decisions =
-            clamp_attr_range(i16::from(player.attributes.decisions) + d_decisions);
-        player.attributes.composure =
-            clamp_attr_range(i16::from(player.attributes.composure) + d_composure);
-        player.attributes.leadership =
-            clamp_attr_range(i16::from(player.attributes.leadership) + d_leadership);
+        player.attributes.teamfighting =
+            clamp_attr_range(i16::from(player.attributes.teamfighting) + d_teamwork);
+        player.attributes.mental_resilience =
+            clamp_attr_range(i16::from(player.attributes.mental_resilience) + d_stamina);
+        player.attributes.macro_play =
+            clamp_attr_range(i16::from(player.attributes.macro_play) + d_vision);
+        player.attributes.consistency =
+            clamp_attr_range(i16::from(player.attributes.consistency) + d_decisions);
+        player.attributes.discipline =
+            clamp_attr_range(i16::from(player.attributes.discipline) + d_composure);
+        player.attributes.shotcalling =
+            clamp_attr_range(i16::from(player.attributes.shotcalling) + d_leadership);
         player.attributes.passing =
             clamp_attr_range(i16::from(player.attributes.passing) + d_passing);
     }
@@ -700,11 +726,20 @@ fn update_post_match_morale(
 
         let mut individual_delta: i16 = 0;
         if let Some(ps) = report.player_stats.get(&player.id) {
-            individual_delta += ps.kills as i16 * 3;
+            let kills = if ps.kills > 0 {
+                ps.kills
+            } else {
+                report
+                    .kill_feed
+                    .iter()
+                    .filter(|kill| kill.killer_id == player.id)
+                    .count() as u16
+            };
+            individual_delta += kills as i16 * 3;
             individual_delta += ps.assists as i16 * 2;
             if ps.deaths >= 5 {
                 individual_delta -= 3;
-            } else if ps.kills + ps.assists >= 6 {
+            } else if kills + ps.assists >= 6 {
                 individual_delta += 2;
             }
         }
@@ -728,11 +763,15 @@ fn update_team_form(
 
     let home_result = if report.home_wins > report.away_wins {
         "W"
+    } else if report.home_wins == report.away_wins {
+        "D"
     } else {
         "L"
     };
     let away_result = if report.away_wins > report.home_wins {
         "W"
+    } else if report.away_wins == report.home_wins {
+        "D"
     } else {
         "L"
     };
@@ -785,13 +824,19 @@ fn deplete_match_stamina(game: &mut Game, team_id: &str, report: &engine::MatchR
             let minutes = report
                 .player_stats
                 .get(&player.id)
-                .map(|ps| (ps.duration_seconds / 60) as u8)
+                .map(|ps| {
+                    if ps.duration_seconds > 0 {
+                        (ps.duration_seconds / 60) as u8
+                    } else {
+                        ps.minutes_played as u8
+                    }
+                })
                 .unwrap_or(0);
             if minutes == 0 {
                 continue;
             }
             let minutes_factor = minutes as f64 / 90.0;
-            let stamina_factor = player.attributes.stamina as f64 / 100.0;
+            let stamina_factor = player.attributes.mental_resilience as f64 / 100.0;
             let base_depletion = 40.0 * (1.0 - stamina_factor * 0.4);
             let depletion = (base_depletion * minutes_factor) as u8;
             player.condition = player.condition.saturating_sub(depletion);
