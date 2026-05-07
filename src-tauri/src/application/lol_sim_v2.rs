@@ -8,6 +8,7 @@ mod api;
 mod combat;
 mod economy;
 mod events;
+mod item_registry;
 mod layout;
 mod macro_ai;
 mod minions;
@@ -26,6 +27,7 @@ mod waves;
 pub use api::*;
 use economy::{champion_kill_rewards, jungle_camp_cs_reward, jungle_camp_reward};
 use events::{log_event, push_event};
+use item_registry::{get_next_purchase, inventory_total_stats, item_registry, InventorySlot};
 use layout::{
     BASE_POSITION_BLUE, BASE_POSITION_RED, LANE_PATH_BOT_BLUE, LANE_PATH_MID_BLUE,
     LANE_PATH_TOP_BLUE, ROLE_SEEDS, STRUCTURE_LAYOUT,
@@ -91,7 +93,7 @@ struct SnapshotPlayer {
     leadership: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RuntimeState {
     time_sec: f64,
@@ -139,6 +141,66 @@ struct ChampionRuntime {
     attack_range: f64,
     attack_type: String,
     attack_damage: f64,
+    #[serde(default)]
+    base_hp: f64,
+    #[serde(default)]
+    bonus_hp: f64,
+    #[serde(default)]
+    base_ad: f64,
+    #[serde(default)]
+    bonus_ad: f64,
+    #[serde(default)]
+    base_ap: f64,
+    #[serde(default)]
+    bonus_ap: f64,
+    #[serde(default)]
+    base_armor: f64,
+    #[serde(default)]
+    bonus_armor: f64,
+    #[serde(default)]
+    base_mr: f64,
+    #[serde(default)]
+    bonus_mr: f64,
+    #[serde(default)]
+    base_as: f64,
+    #[serde(default)]
+    bonus_as: f64,
+    #[serde(default)]
+    base_ms: f64,
+    #[serde(default)]
+    bonus_ms: f64,
+    #[serde(default)]
+    base_crit_chance: f64,
+    #[serde(default)]
+    bonus_crit_chance: f64,
+    #[serde(default)]
+    base_crit_damage: f64,
+    #[serde(default)]
+    bonus_crit_damage: f64,
+    #[serde(default)]
+    base_lethality: f64,
+    #[serde(default)]
+    bonus_lethality: f64,
+    #[serde(default)]
+    base_armor_pen_pct: f64,
+    #[serde(default)]
+    bonus_armor_pen_pct: f64,
+    #[serde(default)]
+    base_magic_pen_flat: f64,
+    #[serde(default)]
+    bonus_magic_pen_flat: f64,
+    #[serde(default)]
+    base_magic_pen_pct: f64,
+    #[serde(default)]
+    bonus_magic_pen_pct: f64,
+    #[serde(default)]
+    base_life_steal: f64,
+    #[serde(default)]
+    bonus_life_steal: f64,
+    #[serde(default)]
+    base_omnivamp: f64,
+    #[serde(default)]
+    bonus_omnivamp: f64,
     target_path: Vec<Vec2>,
     target_path_index: usize,
     next_decision_at: f64,
@@ -158,6 +220,12 @@ struct ChampionRuntime {
     last_support_cs_at: f64,
     #[serde(default)]
     items: Vec<String>,
+    #[serde(default)]
+    inventory: Vec<InventorySlot>,
+    #[serde(default)]
+    item_image_urls: Vec<String>,
+    #[serde(default)]
+    starter_item_name: String,
     #[serde(default = "default_visible_stat")]
     gameplay_score: f64,
     #[serde(default = "default_visible_stat")]
@@ -207,6 +275,82 @@ struct ChampionRuntime {
     forced_lane_recall_cd_until: f64,
     #[serde(default)]
     debug_ai_decision: String,
+}
+
+impl ChampionRuntime {
+    fn total_hp(&self) -> f64 {
+        self.base_hp + self.bonus_hp
+    }
+    fn total_ad(&self) -> f64 {
+        self.base_ad + self.bonus_ad
+    }
+    fn total_ap(&self) -> f64 {
+        self.base_ap + self.bonus_ap
+    }
+    fn total_armor(&self) -> f64 {
+        self.base_armor + self.bonus_armor
+    }
+    fn total_mr(&self) -> f64 {
+        self.base_mr + self.bonus_mr
+    }
+    fn total_as(&self) -> f64 {
+        self.base_as + self.bonus_as
+    }
+    fn total_ms(&self) -> f64 {
+        self.base_ms + self.bonus_ms
+    }
+    fn total_crit_chance(&self) -> f64 {
+        self.base_crit_chance + self.bonus_crit_chance
+    }
+    fn total_crit_damage(&self) -> f64 {
+        self.base_crit_damage + self.bonus_crit_damage
+    }
+    fn total_lethality(&self) -> f64 {
+        self.base_lethality + self.bonus_lethality
+    }
+    fn total_armor_pen_pct(&self) -> f64 {
+        self.base_armor_pen_pct + self.bonus_armor_pen_pct
+    }
+    fn total_magic_pen_flat(&self) -> f64 {
+        self.base_magic_pen_flat + self.bonus_magic_pen_flat
+    }
+    fn total_magic_pen_pct(&self) -> f64 {
+        self.base_magic_pen_pct + self.bonus_magic_pen_pct
+    }
+    fn total_life_steal(&self) -> f64 {
+        self.base_life_steal + self.bonus_life_steal
+    }
+    fn total_omnivamp(&self) -> f64 {
+        self.base_omnivamp + self.bonus_omnivamp
+    }
+
+    pub fn recalculate_bonus_stats(&mut self) {
+        let stats = inventory_total_stats(&self.inventory);
+        self.bonus_hp = stats.flat_hp;
+        self.bonus_ad = stats.flat_ad;
+        self.bonus_ap = stats.flat_ap;
+        self.bonus_armor = stats.flat_armor;
+        self.bonus_mr = stats.flat_mr;
+        self.bonus_as = stats.flat_as + stats.percent_as;
+        self.bonus_ms = stats.flat_ms + stats.percent_ms;
+        self.bonus_crit_chance = stats.flat_crit_chance;
+        self.bonus_crit_damage = stats.flat_crit_damage;
+        self.bonus_lethality = stats.flat_lethality + stats.flat_armor_pen;
+        self.bonus_armor_pen_pct = stats.percent_armor_pen;
+        self.bonus_magic_pen_flat = stats.flat_magic_pen;
+        self.bonus_magic_pen_pct = stats.percent_magic_pen;
+        self.bonus_life_steal = stats.percent_life_steal;
+        self.bonus_omnivamp = stats.percent_omnivamp;
+        self.max_hp = self.total_hp();
+        self.move_speed = self.total_ms();
+        self.attack_damage = self.total_ad();
+        let registry = item_registry();
+        self.item_image_urls = self
+            .inventory
+            .iter()
+            .filter_map(|slot| registry.get(&slot.item_name).map(|def| def.image_url.clone()))
+            .collect();
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -274,14 +418,6 @@ struct NeutralTimerTemplate {
     combat_grace_until: Option<f64>,
     unlocked: bool,
     pos: Vec2,
-}
-
-#[derive(Clone, Copy)]
-struct ItemTemplate {
-    key: &'static str,
-    cost: i64,
-    attack_damage: f64,
-    max_hp: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -641,511 +777,121 @@ const LEVEL_XP_THRESHOLDS: [i64; 18] = [
     12000, 13260,
 ];
 
-const TANK_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "sunfire_aegis",
-        cost: 2700,
-        attack_damage: 10.0,
-        max_hp: 350.0,
-    },
-    ItemTemplate {
-        key: "warmogs_armor",
-        cost: 3100,
-        attack_damage: 0.0,
-        max_hp: 1000.0,
-    },
-    ItemTemplate {
-        key: "iceborn_gauntlet",
-        cost: 2900,
-        attack_damage: 18.0,
-        max_hp: 300.0,
-    },
-    ItemTemplate {
-        key: "randuins_omen",
-        cost: 3000,
-        attack_damage: 0.0,
-        max_hp: 350.0,
-    },
-    ItemTemplate {
-        key: "spirit_visage",
-        cost: 2900,
-        attack_damage: 0.0,
-        max_hp: 450.0,
-    },
-    ItemTemplate {
-        key: "plated_steelcaps",
-        cost: 1200,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const TANK_ITEM_PLAN: &[&str; 6] = &[
+    "Sunfire Aegis",
+    "Warmog's Armor",
+    "Iceborn Gauntlet",
+    "Randuin's Omen",
+    "Spirit Visage",
+    "Plated Steelcaps",
 ];
 
-const BRUISER_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "sundered_sky",
-        cost: 3100,
-        attack_damage: 40.0,
-        max_hp: 300.0,
-    },
-    ItemTemplate {
-        key: "deaths_dance",
-        cost: 3300,
-        attack_damage: 55.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "steraks_gage",
-        cost: 3200,
-        attack_damage: 32.0,
-        max_hp: 450.0,
-    },
-    ItemTemplate {
-        key: "titanic_hydra",
-        cost: 3300,
-        attack_damage: 42.0,
-        max_hp: 550.0,
-    },
-    ItemTemplate {
-        key: "maw_of_malmortius",
-        cost: 3100,
-        attack_damage: 50.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "mercurys_treads",
-        cost: 1250,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const BRUISER_ITEM_PLAN: &[&str; 6] = &[
+    "Sundered Sky",
+    "Death's Dance",
+    "Sterak's Gage",
+    "Titanic Hydra",
+    "Maw of Malmortius",
+    "Mercury's Treads",
 ];
 
-const COLOSSUS_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "black_cleaver",
-        cost: 3000,
-        attack_damage: 40.0,
-        max_hp: 400.0,
-    },
-    ItemTemplate {
-        key: "steraks_gage",
-        cost: 3200,
-        attack_damage: 32.0,
-        max_hp: 450.0,
-    },
-    ItemTemplate {
-        key: "hullbreaker",
-        cost: 3000,
-        attack_damage: 40.0,
-        max_hp: 500.0,
-    },
-    ItemTemplate {
-        key: "titanic_hydra",
-        cost: 3300,
-        attack_damage: 42.0,
-        max_hp: 550.0,
-    },
-    ItemTemplate {
-        key: "dead_mans_plate",
-        cost: 2900,
-        attack_damage: 10.0,
-        max_hp: 350.0,
-    },
-    ItemTemplate {
-        key: "plated_steelcaps",
-        cost: 1200,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const COLOSSUS_ITEM_PLAN: &[&str; 6] = &[
+    "Black Cleaver",
+    "Sterak's Gage",
+    "Hullbreaker",
+    "Titanic Hydra",
+    "Dead Man's Plate",
+    "Plated Steelcaps",
 ];
 
-const ASSASSIN_AD_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "voltaic_cyclosword",
-        cost: 2900,
-        attack_damage: 55.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "opportunity",
-        cost: 2700,
-        attack_damage: 55.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "immortal_shieldbow",
-        cost: 3000,
-        attack_damage: 50.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "seryldas_grudge",
-        cost: 3200,
-        attack_damage: 45.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "profane_hydra",
-        cost: 3300,
-        attack_damage: 60.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "boots_of_swiftness",
-        cost: 1000,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const ASSASSIN_AD_ITEM_PLAN: &[&str; 6] = &[
+    "Voltaic Cyclosword",
+    "Opportunity",
+    "Immortal Shieldbow",
+    "Serylda's Grudge",
+    "Profane Hydra",
+    "Boots of Swiftness",
 ];
 
-const ASSASSIN_AP_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "stormsurge",
-        cost: 2900,
-        attack_damage: 36.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "lich_bane",
-        cost: 3200,
-        attack_damage: 32.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "shadowflame",
-        cost: 3200,
-        attack_damage: 35.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "zhonyas_hourglass",
-        cost: 3250,
-        attack_damage: 25.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "rabadons_deathcap",
-        cost: 3600,
-        attack_damage: 45.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "sorcerers_shoes",
-        cost: 1100,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const ASSASSIN_AP_ITEM_PLAN: &[&str; 6] = &[
+    "Stormsurge",
+    "Lich Bane",
+    "Shadowflame",
+    "Zhonya's Hourglass",
+    "Rabadon's Deathcap",
+    "Sorcerer's Shoes",
 ];
 
-const CONTROL_MAGE_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "ludens_companion",
-        cost: 2900,
-        attack_damage: 35.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "void_staff",
-        cost: 3000,
-        attack_damage: 30.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "zhonyas_hourglass",
-        cost: 3250,
-        attack_damage: 25.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "seraphs_embrace",
-        cost: 3000,
-        attack_damage: 28.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "rabadons_deathcap",
-        cost: 3600,
-        attack_damage: 45.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "sorcerers_shoes",
-        cost: 1100,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const CONTROL_MAGE_ITEM_PLAN: &[&str; 6] = &[
+    "Luden's Companion",
+    "Void Staff",
+    "Zhonya's Hourglass",
+    "Seraph's Embrace",
+    "Rabadon's Deathcap",
+    "Sorcerer's Shoes",
 ];
 
-const BATTLE_MAGE_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "liandrys_torment",
-        cost: 3000,
-        attack_damage: 33.0,
-        max_hp: 300.0,
-    },
-    ItemTemplate {
-        key: "rylais_crystal_scepter",
-        cost: 2600,
-        attack_damage: 25.0,
-        max_hp: 400.0,
-    },
-    ItemTemplate {
-        key: "seraphs_embrace",
-        cost: 3000,
-        attack_damage: 28.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "cosmic_drive",
-        cost: 3000,
-        attack_damage: 30.0,
-        max_hp: 350.0,
-    },
-    ItemTemplate {
-        key: "zhonyas_hourglass",
-        cost: 3250,
-        attack_damage: 25.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "mercurys_treads",
-        cost: 1250,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const BATTLE_MAGE_ITEM_PLAN: &[&str; 6] = &[
+    "Liandry's Torment",
+    "Rylai's Crystal Scepter",
+    "Seraph's Embrace",
+    "Cosmic Drive",
+    "Zhonya's Hourglass",
+    "Mercury's Treads",
 ];
 
-const ADC_CRIT_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "bloodthirster",
-        cost: 3400,
-        attack_damage: 70.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "infinity_edge",
-        cost: 3400,
-        attack_damage: 65.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "mortal_reminder",
-        cost: 3200,
-        attack_damage: 40.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "rapid_firecannon",
-        cost: 2600,
-        attack_damage: 24.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "phantom_dancer",
-        cost: 2600,
-        attack_damage: 24.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "berserkers_greaves",
-        cost: 1100,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const ADC_CRIT_ITEM_PLAN: &[&str; 6] = &[
+    "Bloodthirster",
+    "Infinity Edge",
+    "Mortal Reminder",
+    "Rapid Firecannon",
+    "Phantom Dancer",
+    "Berserker's Greaves",
 ];
 
-const ADC_ATTACK_SPEED_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "blade_of_the_ruined_king",
-        cost: 3200,
-        attack_damage: 42.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "wits_end",
-        cost: 2900,
-        attack_damage: 34.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "runaans_hurricane",
-        cost: 2650,
-        attack_damage: 24.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "guinsoos_rageblade",
-        cost: 3000,
-        attack_damage: 36.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "terminus",
-        cost: 3000,
-        attack_damage: 35.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "berserkers_greaves",
-        cost: 1100,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const ADC_ATTACK_SPEED_ITEM_PLAN: &[&str; 6] = &[
+    "Blade of the Ruined King",
+    "Wit's End",
+    "Runaan's Hurricane",
+    "Guinsoo's Rageblade",
+    "Terminus",
+    "Berserker's Greaves",
 ];
 
-const LETHALITY_MARKSMAN_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "the_collector",
-        cost: 3100,
-        attack_damage: 55.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "opportunity",
-        cost: 2700,
-        attack_damage: 55.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "seryldas_grudge",
-        cost: 3200,
-        attack_damage: 45.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "edge_of_night",
-        cost: 3000,
-        attack_damage: 50.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "profane_hydra",
-        cost: 3300,
-        attack_damage: 60.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "ionian_boots_of_lucidity",
-        cost: 900,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const LETHALITY_MARKSMAN_ITEM_PLAN: &[&str; 6] = &[
+    "The Collector",
+    "Opportunity",
+    "Serylda's Grudge",
+    "Edge of Night",
+    "Profane Hydra",
+    "Ionian Boots of Lucidity",
 ];
 
-const SUPPORT_ENGAGE_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "trailblazer",
-        cost: 2400,
-        attack_damage: 8.0,
-        max_hp: 350.0,
-    },
-    ItemTemplate {
-        key: "zekes_convergence",
-        cost: 2200,
-        attack_damage: 8.0,
-        max_hp: 250.0,
-    },
-    ItemTemplate {
-        key: "knights_vow",
-        cost: 2300,
-        attack_damage: 0.0,
-        max_hp: 350.0,
-    },
-    ItemTemplate {
-        key: "locket_of_the_iron_solari",
-        cost: 2200,
-        attack_damage: 0.0,
-        max_hp: 250.0,
-    },
-    ItemTemplate {
-        key: "thornmail",
-        cost: 2450,
-        attack_damage: 0.0,
-        max_hp: 350.0,
-    },
-    ItemTemplate {
-        key: "mobility_boots",
-        cost: 1000,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const SUPPORT_ENGAGE_ITEM_PLAN: &[&str; 6] = &[
+    "Trailblazer",
+    "Zeke's Convergence",
+    "Knight's Vow",
+    "Locket of the Iron Solari",
+    "Thornmail",
+    "Mobility Boots",
 ];
 
-const SUPPORT_ENCHANTER_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "shurelyas_battlesong",
-        cost: 2200,
-        attack_damage: 10.0,
-        max_hp: 300.0,
-    },
-    ItemTemplate {
-        key: "ardent_censer",
-        cost: 2300,
-        attack_damage: 18.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "moonstone_renewer",
-        cost: 2200,
-        attack_damage: 14.0,
-        max_hp: 250.0,
-    },
-    ItemTemplate {
-        key: "redemption",
-        cost: 2300,
-        attack_damage: 12.0,
-        max_hp: 250.0,
-    },
-    ItemTemplate {
-        key: "staff_of_flowing_water",
-        cost: 2250,
-        attack_damage: 18.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "ionian_boots_of_lucidity",
-        cost: 900,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const SUPPORT_ENCHANTER_ITEM_PLAN: &[&str; 6] = &[
+    "Shurelya's Battlesong",
+    "Ardent Censer",
+    "Moonstone Renewer",
+    "Redemption",
+    "Staff of Flowing Water",
+    "Ionian Boots of Lucidity",
 ];
 
-const SUPPORT_DAMAGE_ITEM_PLAN: [ItemTemplate; 6] = [
-    ItemTemplate {
-        key: "rylais_crystal_scepter",
-        cost: 2600,
-        attack_damage: 25.0,
-        max_hp: 400.0,
-    },
-    ItemTemplate {
-        key: "liandrys_torment",
-        cost: 3000,
-        attack_damage: 33.0,
-        max_hp: 300.0,
-    },
-    ItemTemplate {
-        key: "morellonomicon",
-        cost: 2950,
-        attack_damage: 28.0,
-        max_hp: 350.0,
-    },
-    ItemTemplate {
-        key: "zhonyas_hourglass",
-        cost: 3250,
-        attack_damage: 25.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "cryptbloom",
-        cost: 2850,
-        attack_damage: 27.0,
-        max_hp: 0.0,
-    },
-    ItemTemplate {
-        key: "sorcerers_shoes",
-        cost: 1100,
-        attack_damage: 0.0,
-        max_hp: 0.0,
-    },
+const SUPPORT_DAMAGE_ITEM_PLAN: &[&str; 6] = &[
+    "Rylai's Crystal Scepter",
+    "Liandry's Torment",
+    "Morellonomicon",
+    "Zhonya's Hourglass",
+    "Cryptbloom",
+    "Sorcerer's Shoes",
 ];
 
 fn create_champions(
@@ -1363,6 +1109,20 @@ fn seed_team(
                 })
             });
 
+        // Determine starter item
+        let starter_name = pick_starter_item(role_seed.role, champion_id.unwrap_or(&String::new()), rng);
+        let registry = item_registry();
+        let starter_def = registry.get(starter_name);
+        let starter_cost = starter_def.map(|d| d.total_cost).unwrap_or(0);
+        let starter_image = starter_def.map(|d| d.image_url.clone()).unwrap_or_default();
+        let starter_stats = starter_def.map(|d| d.stats.clone()).unwrap_or_default();
+
+        let mut max_hp = max_hp + starter_stats.flat_hp;
+        let mut attack_damage = attack_damage + starter_stats.flat_ad;
+        let mut move_speed = move_speed + starter_stats.flat_ms + starter_stats.percent_ms;
+
+        let initial_gold = 500 - starter_cost;
+
         // Keep this object built manually instead of one huge `json!` call.
         // The champion runtime payload is large enough that serde_json's macro can
         // hit the crate recursion limit when new fields are added.
@@ -1392,6 +1152,16 @@ fn seed_team(
         champion_obj.insert("attackRange".to_string(), Value::from(attack_range));
         champion_obj.insert("attackType".to_string(), Value::from(attack_type));
         champion_obj.insert("attackDamage".to_string(), Value::from(attack_damage));
+        champion_obj.insert("baseHp".to_string(), Value::from(max_hp));
+        champion_obj.insert("baseAd".to_string(), Value::from(attack_damage));
+        champion_obj.insert("baseMs".to_string(), Value::from(move_speed));
+        champion_obj.insert("baseAs".to_string(), Value::from(1.0 + starter_stats.flat_as + starter_stats.percent_as));
+        champion_obj.insert("baseArmor".to_string(), Value::from(30.0 + starter_stats.flat_armor));
+        champion_obj.insert("baseMr".to_string(), Value::from(30.0 + starter_stats.flat_mr));
+        champion_obj.insert("baseAp".to_string(), Value::from(starter_stats.flat_ap));
+        champion_obj.insert("baseCritChance".to_string(), Value::from(starter_stats.flat_crit_chance));
+        champion_obj.insert("baseCritDamage".to_string(), Value::from(2.0 + starter_stats.flat_crit_damage));
+        champion_obj.insert("baseLethality".to_string(), Value::from(starter_stats.flat_lethality + starter_stats.flat_armor_pen));
         champion_obj.insert("targetPath".to_string(), Value::Array(initial_target_path));
         champion_obj.insert("targetPathIndex".to_string(), Value::from(0));
         champion_obj.insert(
@@ -1401,14 +1171,17 @@ fn seed_team(
         champion_obj.insert("kills".to_string(), Value::from(0));
         champion_obj.insert("deaths".to_string(), Value::from(0));
         champion_obj.insert("assists".to_string(), Value::from(0));
-        champion_obj.insert("gold".to_string(), Value::from(500));
+        champion_obj.insert("gold".to_string(), Value::from(initial_gold));
+        champion_obj.insert("items".to_string(), json!([starter_name]));
+        champion_obj.insert("inventory".to_string(), json!([{"itemName": starter_name, "isComponent": true}]));
+        champion_obj.insert("itemImageUrls".to_string(), json!([starter_image]));
+        champion_obj.insert("starterItemName".to_string(), Value::from(starter_name));
         champion_obj.insert("spentGold".to_string(), Value::from(0));
         champion_obj.insert("xp".to_string(), Value::from(0));
         champion_obj.insert("level".to_string(), Value::from(1));
         champion_obj.insert("cs".to_string(), Value::from(0));
         champion_obj.insert("hasLeftBaseOnce".to_string(), Value::from(false));
         champion_obj.insert("lastSupportCsAt".to_string(), Value::from(-999.0));
-        champion_obj.insert("items".to_string(), Value::Array(Vec::new()));
         champion_obj.insert("gameplayScore".to_string(), Value::from(gameplay_score));
         champion_obj.insert("iqScore".to_string(), Value::from(iq_score));
         champion_obj.insert(
@@ -5255,21 +5028,51 @@ fn attack_enemy_champion(runtime: &mut RuntimeState, attacker_idx: usize, target
     let mut killer_name = String::new();
     let mut killer_team = String::new();
 
+    let (outgoing, life_steal_heal) = {
+        let attacker = &runtime.champions[attacker_idx];
+        let defender = &runtime.champions[target_idx];
+
+        let crit_chance = attacker.total_crit_chance().clamp(0.0, 1.0);
+        let crit_damage = attacker.total_crit_damage();
+        let expected_crit_mult = 1.0 + crit_chance * (crit_damage - 1.0);
+
+        let physical_damage = attacker.total_ad() * expected_crit_mult;
+        let magic_damage = attacker.total_ap() * 0.8;
+
+        let defender_armor = defender.total_armor();
+        let defender_mr = defender.total_mr();
+
+        let armor_pen_flat = attacker.total_lethality();
+        let armor_pen_pct = attacker.total_armor_pen_pct().clamp(0.0, 1.0);
+        let eff_armor = (defender_armor - armor_pen_flat).max(0.0) * (1.0 - armor_pen_pct);
+        let physical_mitigation = 100.0 / (100.0 + eff_armor.max(0.0));
+
+        let magic_pen_flat = attacker.total_magic_pen_flat();
+        let magic_pen_pct = attacker.total_magic_pen_pct().clamp(0.0, 1.0);
+        let eff_mr = (defender_mr - magic_pen_flat).max(0.0) * (1.0 - magic_pen_pct);
+        let magic_mitigation = 100.0 / (100.0 + eff_mr.max(0.0));
+
+        let total_damage = (physical_damage * physical_mitigation + magic_damage * magic_mitigation)
+            * CHAMPION_DAMAGE_TO_CHAMPION_MULTIPLIER
+            * attack_damage_multiplier
+            * attacker_micro_mult;
+
+        let heal = total_damage * attacker.total_life_steal();
+        (total_damage, heal)
+    };
+
     if attacker_idx < target_idx {
         let (left, right) = runtime.champions.split_at_mut(target_idx);
         let attacker = &mut left[attacker_idx];
         let defender = &mut right[0];
 
-        let outgoing = attacker.attack_damage
-            * CHAMPION_DAMAGE_TO_CHAMPION_MULTIPLIER
-            * attack_damage_multiplier
-            * attacker_micro_mult;
         defender.hp -= outgoing;
         defender.last_damaged_by_champion_id = Some(attacker.id.clone());
         defender.last_damaged_by_champion_at = now;
         defender.last_damaged_at = now;
         cancel_recall(defender, now, &mut runtime.events);
-        attacker.attack_cd_until = now + CHAMPION_ATTACK_CADENCE_SEC;
+        attacker.attack_cd_until = now + (1.0 / attacker.total_as().max(0.1));
+        attacker.hp = (attacker.hp + life_steal_heal).min(attacker.max_hp);
 
         if attacker_has_elder
             && defender.max_hp > 0.0
@@ -5297,16 +5100,13 @@ fn attack_enemy_champion(runtime: &mut RuntimeState, attacker_idx: usize, target
         let defender = &mut left[target_idx];
         let attacker = &mut right[0];
 
-        let outgoing = attacker.attack_damage
-            * CHAMPION_DAMAGE_TO_CHAMPION_MULTIPLIER
-            * attack_damage_multiplier
-            * attacker_micro_mult;
         defender.hp -= outgoing;
         defender.last_damaged_by_champion_id = Some(attacker.id.clone());
         defender.last_damaged_by_champion_at = now;
         defender.last_damaged_at = now;
         cancel_recall(defender, now, &mut runtime.events);
-        attacker.attack_cd_until = now + CHAMPION_ATTACK_CADENCE_SEC;
+        attacker.attack_cd_until = now + (1.0 / attacker.total_as().max(0.1));
+        attacker.hp = (attacker.hp + life_steal_heal).min(attacker.max_hp);
 
         if attacker_has_elder
             && defender.max_hp > 0.0
@@ -5788,21 +5588,21 @@ fn normalize_champion_key(raw: &str) -> String {
         .collect()
 }
 
-fn category_plan(category: ItemBuildCategory) -> &'static [ItemTemplate; 6] {
+fn category_plan(category: ItemBuildCategory) -> &'static [&'static str; 6] {
     match category {
-        ItemBuildCategory::Tank => &TANK_ITEM_PLAN,
-        ItemBuildCategory::Bruiser => &BRUISER_ITEM_PLAN,
-        ItemBuildCategory::Colossus => &COLOSSUS_ITEM_PLAN,
-        ItemBuildCategory::AssassinAd => &ASSASSIN_AD_ITEM_PLAN,
-        ItemBuildCategory::AssassinAp => &ASSASSIN_AP_ITEM_PLAN,
-        ItemBuildCategory::ControlMage => &CONTROL_MAGE_ITEM_PLAN,
-        ItemBuildCategory::BattleMage => &BATTLE_MAGE_ITEM_PLAN,
-        ItemBuildCategory::AdcCrit => &ADC_CRIT_ITEM_PLAN,
-        ItemBuildCategory::AdcAttackSpeed => &ADC_ATTACK_SPEED_ITEM_PLAN,
-        ItemBuildCategory::LethalityMarksman => &LETHALITY_MARKSMAN_ITEM_PLAN,
-        ItemBuildCategory::SupportEngage => &SUPPORT_ENGAGE_ITEM_PLAN,
-        ItemBuildCategory::SupportEnchanter => &SUPPORT_ENCHANTER_ITEM_PLAN,
-        ItemBuildCategory::SupportDamage => &SUPPORT_DAMAGE_ITEM_PLAN,
+        ItemBuildCategory::Tank => TANK_ITEM_PLAN,
+        ItemBuildCategory::Bruiser => BRUISER_ITEM_PLAN,
+        ItemBuildCategory::Colossus => COLOSSUS_ITEM_PLAN,
+        ItemBuildCategory::AssassinAd => ASSASSIN_AD_ITEM_PLAN,
+        ItemBuildCategory::AssassinAp => ASSASSIN_AP_ITEM_PLAN,
+        ItemBuildCategory::ControlMage => CONTROL_MAGE_ITEM_PLAN,
+        ItemBuildCategory::BattleMage => BATTLE_MAGE_ITEM_PLAN,
+        ItemBuildCategory::AdcCrit => ADC_CRIT_ITEM_PLAN,
+        ItemBuildCategory::AdcAttackSpeed => ADC_ATTACK_SPEED_ITEM_PLAN,
+        ItemBuildCategory::LethalityMarksman => LETHALITY_MARKSMAN_ITEM_PLAN,
+        ItemBuildCategory::SupportEngage => SUPPORT_ENGAGE_ITEM_PLAN,
+        ItemBuildCategory::SupportEnchanter => SUPPORT_ENCHANTER_ITEM_PLAN,
+        ItemBuildCategory::SupportDamage => SUPPORT_DAMAGE_ITEM_PLAN,
     }
 }
 
@@ -5812,24 +5612,63 @@ pub(super) fn champion_can_afford_next_item(champion: &ChampionRuntime) -> bool 
     }
 
     let plan = champion_item_plan(&champion.role, &champion.champion_id);
-    let has_boots = champion.items.iter().any(|item| is_boots_item_key(item));
-    let next_item = if !has_boots {
+    let registry = item_registry();
+    let has_boots = champion.items.iter().any(|item| registry.is_boots(item));
+    let next_name = if !has_boots {
         plan.iter()
-            .find(|candidate| is_boots_item_key(candidate.key))
+            .find(|candidate| registry.is_boots(candidate))
             .or_else(|| {
                 plan.iter()
-                    .find(|candidate| !champion.items.iter().any(|owned| owned == candidate.key))
+                    .find(|candidate| !champion.items.iter().any(|owned| owned == *candidate))
             })
     } else {
         plan.iter()
-            .find(|candidate| !champion.items.iter().any(|owned| owned == candidate.key))
+            .find(|candidate| !champion.items.iter().any(|owned| owned == *candidate))
     };
 
-    let Some(next_item) = next_item else {
+    let Some(next_name) = next_name else {
         return false;
     };
 
-    champion.gold >= effective_item_cost(next_item.cost)
+    let Some(def) = registry.get(next_name) else {
+        return false;
+    };
+
+    champion.gold >= def.total_cost
+}
+
+fn pick_starter_item(role: &str, champion_id: &str, rng: &mut Mulberry32) -> &'static str {
+    match role {
+        "JGL" => {
+            let starters = ["Gustwalker Hatchling", "Mosstomper Seedling", "Scorchclaw Pup"];
+            starters[(rng.next_f64() * starters.len() as f64) as usize % starters.len()]
+        }
+        "SUP" => {
+            let starters = ["World Atlas", "Celestial Opposition", "Dream Maker", "Bloodsong"];
+            starters[(rng.next_f64() * starters.len() as f64) as usize % starters.len()]
+        }
+        "ADC" => "Doran's Blade",
+        "MID" | "TOP" => {
+            let category = classify_item_build(role, champion_id);
+            match category {
+                ItemBuildCategory::AssassinAd
+                | ItemBuildCategory::Bruiser
+                | ItemBuildCategory::Tank
+                | ItemBuildCategory::Colossus
+                | ItemBuildCategory::AdcCrit
+                | ItemBuildCategory::AdcAttackSpeed
+                | ItemBuildCategory::LethalityMarksman => {
+                    if role == "TOP" {
+                        "Doran's Shield"
+                    } else {
+                        "Doran's Blade"
+                    }
+                }
+                _ => "Doran's Ring",
+            }
+        }
+        _ => "Doran's Blade",
+    }
 }
 
 fn classify_item_build(role: &str, champion_id: &str) -> ItemBuildCategory {
@@ -6068,7 +5907,7 @@ fn classify_item_build(role: &str, champion_id: &str) -> ItemBuildCategory {
     }
 }
 
-fn champion_item_plan(role: &str, champion_id: &str) -> &'static [ItemTemplate; 6] {
+fn champion_item_plan(role: &str, champion_id: &str) -> &'static [&'static str; 6] {
     category_plan(classify_item_build(role, champion_id))
 }
 
@@ -6101,71 +5940,108 @@ fn try_auto_buy_items(runtime: &mut RuntimeState) {
             }
         }
 
-        let (
-            alive,
-            role,
-            champion_id,
-            at_base,
-            item_count,
-            gold,
-            name,
-            owned_items,
-            has_left_base_once,
-        ) = {
-            let champion = &runtime.champions[idx];
-            (
-                champion.alive,
-                champion.role.clone(),
-                champion.champion_id.clone(),
-                dist(champion.pos, base_position_for(&champion.team)) <= 0.075,
-                champion.items.len(),
-                champion.gold,
-                champion.name.clone(),
-                champion.items.clone(),
-                champion.has_left_base_once,
-            )
-        };
-
-        if !alive || !at_base || item_count >= 6 || !has_left_base_once {
-            continue;
+        // Sell starter item once champion has 3+ items
+        {
+            let (starter, name) = {
+                let champion = &mut runtime.champions[idx];
+                let completed_items = champion.inventory.iter().filter(|s| !s.is_component).count();
+                if champion.starter_item_name.is_empty() || completed_items < 3 {
+                    (String::new(), String::new())
+                } else {
+                    let registry = item_registry();
+                    if let Some(def) = registry.get(&champion.starter_item_name) {
+                        champion.gold += def.sell_value;
+                        champion.base_hp -= def.stats.flat_hp;
+                        champion.base_ad -= def.stats.flat_ad;
+                        champion.base_ap -= def.stats.flat_ap;
+                        champion.base_armor -= def.stats.flat_armor;
+                        champion.base_mr -= def.stats.flat_mr;
+                        champion.base_as -= def.stats.flat_as + def.stats.percent_as;
+                        champion.base_ms -= def.stats.flat_ms + def.stats.percent_ms;
+                        champion.base_crit_chance -= def.stats.flat_crit_chance;
+                        champion.base_crit_damage -= def.stats.flat_crit_damage;
+                        champion.base_lethality -= def.stats.flat_lethality + def.stats.flat_armor_pen;
+                    }
+                    let starter = champion.starter_item_name.clone();
+                    champion.inventory.retain(|s| s.item_name != starter);
+                    champion.items.retain(|s| s != &starter);
+                    champion.starter_item_name.clear();
+                    champion.recalculate_bonus_stats();
+                    (starter, champion.name.clone())
+                }
+            };
+            if !starter.is_empty() {
+                log_event(
+                    runtime,
+                    &format!("{} sold starter {}", name, starter),
+                    "info",
+                );
+            }
         }
 
-        let plan = champion_item_plan(&role, &champion_id);
-        let has_boots = owned_items.iter().any(|item| is_boots_item_key(item));
+        loop {
+            let (
+                alive,
+                role,
+                champion_id,
+                at_base,
+                item_count,
+                gold,
+                name,
+                inventory,
+                has_left_base_once,
+            ) = {
+                let champion = &runtime.champions[idx];
+                (
+                    champion.alive,
+                    champion.role.clone(),
+                    champion.champion_id.clone(),
+                    dist(champion.pos, base_position_for(&champion.team)) <= 0.075,
+                    champion.inventory.len(),
+                    champion.gold,
+                    champion.name.clone(),
+                    champion.inventory.clone(),
+                    champion.has_left_base_once,
+                )
+            };
 
-        let next_item = if !has_boots {
-            plan.iter()
-                .find(|candidate| is_boots_item_key(candidate.key))
-        } else {
-            plan.iter()
-                .find(|candidate| !owned_items.iter().any(|owned| owned == candidate.key))
-        };
+            if !alive || !at_base || item_count >= 6 || !has_left_base_once {
+                break;
+            }
 
-        let Some(next_item) = next_item else {
-            continue;
-        };
+            let plan = champion_item_plan(&role, &champion_id);
+            let Some(item_name) = get_next_purchase(plan, &inventory, gold) else {
+                break;
+            };
 
-        let buy_cost = effective_item_cost(next_item.cost);
+            let registry = item_registry();
+            let Some(def) = registry.get(&item_name) else {
+                break;
+            };
 
-        if gold < buy_cost {
-            continue;
+            let cost = def.total_cost;
+            if gold < cost {
+                break;
+            }
+
+            let is_component = !plan.contains(&item_name.as_str());
+
+            let champion = &mut runtime.champions[idx];
+            champion.gold -= cost;
+            champion.spent_gold += cost;
+            champion.inventory.push(InventorySlot {
+                item_name: item_name.clone(),
+                is_component,
+            });
+            champion.items.push(item_name.clone());
+            champion.recalculate_bonus_stats();
+
+            log_event(
+                runtime,
+                &format!("{} bought {}", name, item_name),
+                "info",
+            );
         }
-
-        let champion = &mut runtime.champions[idx];
-        champion.gold -= buy_cost;
-        champion.spent_gold += buy_cost;
-        champion.items.push(next_item.key.to_string());
-        champion.attack_damage += next_item.attack_damage;
-        if next_item.max_hp > 0.0 {
-            champion.max_hp += next_item.max_hp;
-            champion.hp = (champion.hp + next_item.max_hp).min(champion.max_hp);
-        }
-
-        log_event(
-            runtime,
-            &format!("{} bought {}", name, next_item.key),
-            "info",
-        );
     }
 }
 

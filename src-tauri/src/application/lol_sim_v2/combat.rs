@@ -435,8 +435,8 @@ pub(super) fn has_credible_kill_chance(
         })
         .count() as f64;
 
-    let ttk_enemy = enemy.hp / champion.attack_damage.max(1.0);
-    let ttk_self = champion.hp / enemy.attack_damage.max(1.0);
+    let ttk_enemy = enemy.hp / champion.total_ad().max(1.0);
+    let ttk_self = champion.hp / enemy.total_ad().max(1.0);
     let enemy_hp_ratio = if enemy.max_hp <= 0.0 {
         1.0
     } else {
@@ -879,7 +879,7 @@ pub(super) fn pick_combat_target(
             is_visible_lane_enemy_minion(runtime, champion_team, champion_lane, enemy_team, m)
                 && dist(champion.pos, m.pos) <= laner_farm_search_radius(champion)
                 && m.hp
-                    <= (champion.attack_damage * CHAMPION_DAMAGE_TO_MINION_MULTIPLIER * lane_mult)
+                    <= (champion.total_ad() * CHAMPION_DAMAGE_TO_MINION_MULTIPLIER * lane_mult)
         })
         .min_by(|(idx_a, a), (idx_b, b)| {
             compare_by_hp_distance_stable(champion.pos, *idx_a, a.hp, a.pos, *idx_b, b.hp, b.pos)
@@ -1487,15 +1487,17 @@ pub(super) fn resolve_champion_combat(runtime: &mut RuntimeState) {
                     } else {
                         1.0
                     };
-                let damage = runtime.champions[idx].attack_damage
+                let damage = runtime.champions[idx].total_ad()
                     * CHAMPION_DAMAGE_TO_MINION_MULTIPLIER
                     * lane_mult
                     * baron_defense_mult
                     * baron_siege_clear_mult;
+                let champion_id = runtime.champions[idx].id.clone();
+                let cadence = 1.0 / runtime.champions[idx].total_as().max(0.1);
                 runtime.minions[minion_idx].hp -= damage;
                 runtime.minions[minion_idx].last_hit_by_champion_id =
-                    Some(runtime.champions[idx].id.clone());
-                runtime.champions[idx].attack_cd_until = now + 0.75;
+                    Some(champion_id);
+                runtime.champions[idx].attack_cd_until = now + cadence;
                 if runtime.minions[minion_idx].hp <= 0.0 {
                     register_minion_death(runtime, minion_idx);
                 }
@@ -1513,13 +1515,15 @@ pub(super) fn resolve_champion_combat(runtime: &mut RuntimeState) {
                     continue;
                 }
                 let structure_mult = champion_structure_focus_multiplier(&runtime.champions[idx]);
+                let damage = runtime.champions[idx].total_ad() * structure_mult;
+                let cadence = 1.0 / runtime.champions[idx].total_as().max(0.1);
                 apply_damage_to_structure(
                     runtime,
                     structure_idx,
-                    runtime.champions[idx].attack_damage * structure_mult,
+                    damage,
                     &team,
                 );
-                runtime.champions[idx].attack_cd_until = now + 0.9;
+                runtime.champions[idx].attack_cd_until = now + cadence;
             }
             CombatTarget::Neutral(neutral_key) => {
                 if attack_neutral_if_in_range(runtime, &mut neutral_timers, idx, &neutral_key) {

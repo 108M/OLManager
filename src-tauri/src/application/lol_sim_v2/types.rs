@@ -6,14 +6,14 @@ pub(super) struct Vec2 {
     pub y: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct RuntimeStats {
     pub blue: RuntimeTeamStats,
     pub red: RuntimeTeamStats,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct RuntimeTeamStats {
     pub kills: i64,

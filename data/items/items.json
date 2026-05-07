@@ -1,0 +1,3059 @@
+{
+  "source": "leagueoflegends.fandom.com (infobox v4)",
+  "item_count": 194,
+  "items": {
+    "Cull": {
+      "name": "Cull",
+      "id": 1083,
+      "total_cost": 450.0,
+      "sell_value": 180.0,
+      "components": [],
+      "stats": {
+        "ad": 7.0,
+        "hp": 3.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/1/11/Cull_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201116174218",
+      "tags": []
+    },
+    "Dark Seal": {
+      "name": "Dark Seal",
+      "id": 1082,
+      "total_cost": 350.0,
+      "sell_value": 140.0,
+      "components": [],
+      "stats": {
+        "ap": 82.11,
+        "hp": 50.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/1/13/Dark_Seal_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231011155132",
+      "tags": []
+    },
+    "Doran's Blade": {
+      "name": "Doran's Blade",
+      "id": 1055,
+      "total_cost": 450.0,
+      "sell_value": 180.0,
+      "components": [],
+      "stats": {
+        "ad": 10.0,
+        "hp": 80.0,
+        "life_steal": 0.03
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/f7/Doran%27s_Blade_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109214555",
+      "tags": []
+    },
+    "Doran's Ring": {
+      "name": "Doran's Ring",
+      "id": 1056,
+      "total_cost": 400.0,
+      "sell_value": 160.0,
+      "components": [],
+      "stats": {
+        "ap": 18.0,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/0/0a/Doran%27s_Ring_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109214727",
+      "tags": []
+    },
+    "Doran's Shield": {
+      "name": "Doran's Shield",
+      "id": 1054,
+      "total_cost": 450.0,
+      "sell_value": 180.0,
+      "components": [],
+      "stats": {
+        "hp": 4.0,
+        "hp_regen": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/a2/Doran%27s_Shield_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922212045",
+      "tags": []
+    },
+    "Guardian's Blade": {
+      "name": "Guardian's Blade",
+      "id": 3177,
+      "total_cost": 950.0,
+      "sell_value": 665.0,
+      "components": [],
+      "stats": {
+        "ad": 30.0,
+        "ability_haste": 15.0,
+        "hp": 150.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/ee/Guardian%27s_Blade_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922041627",
+      "tags": []
+    },
+    "Guardian's Hammer": {
+      "name": "Guardian's Hammer",
+      "id": 3184,
+      "total_cost": 950.0,
+      "sell_value": 665.0,
+      "components": [],
+      "stats": {
+        "ad": 25.0,
+        "hp": 150.0,
+        "life_steal": 0.07
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/76/Guardian%27s_Hammer_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922041725",
+      "tags": []
+    },
+    "Guardian's Horn": {
+      "name": "Guardian's Horn",
+      "id": 2051,
+      "total_cost": 950.0,
+      "sell_value": 665.0,
+      "components": [],
+      "stats": {
+        "hp": 20.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/ba/Guardian%27s_Horn_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922041516",
+      "tags": []
+    },
+    "Guardian's Orb": {
+      "name": "Guardian's Orb",
+      "id": 3112,
+      "total_cost": 950.0,
+      "sell_value": 665.0,
+      "components": [],
+      "stats": {
+        "ap": 50.0,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/99/Guardian%27s_Orb_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922041142",
+      "tags": []
+    },
+    "Gustwalker Hatchling": {
+      "name": "Gustwalker Hatchling",
+      "id": 1102,
+      "total_cost": 450.0,
+      "sell_value": 180.0,
+      "components": [],
+      "stats": {
+        "movement_speed": 0.05
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/27/Gustwalker_Hatchling_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221117185730",
+      "tags": []
+    },
+    "Mosstomper Seedling": {
+      "name": "Mosstomper Seedling",
+      "id": 1103,
+      "total_cost": 450.0,
+      "sell_value": 180.0,
+      "components": [],
+      "stats": {},
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/5/5e/Mosstomper_Seedling_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221117190416",
+      "tags": []
+    },
+    "Scorchclaw Pup": {
+      "name": "Scorchclaw Pup",
+      "id": 1101,
+      "total_cost": 450.0,
+      "sell_value": 180.0,
+      "components": [],
+      "stats": {
+        "hp": 0.03
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/ef/Scorchclaw_Pup_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221117184448",
+      "tags": []
+    },
+    "Tear of the Goddess": {
+      "name": "Tear of the Goddess",
+      "id": 3070,
+      "total_cost": 400.0,
+      "sell_value": 280.0,
+      "components": [],
+      "stats": {
+        "mana": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/6/66/Tear_of_the_Goddess_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111004755",
+      "tags": []
+    },
+    "World Atlas": {
+      "name": "World Atlas",
+      "id": 3865,
+      "total_cost": 400.0,
+      "sell_value": 160.0,
+      "components": [],
+      "stats": {
+        "hp": 82.11,
+        "hp_regen": 0.25,
+        "mp_regen": 0.25
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/30/World_Atlas_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214927",
+      "tags": []
+    },
+    "Berserker's Greaves": {
+      "name": "Berserker's Greaves",
+      "id": 3006,
+      "total_cost": 1100.0,
+      "sell_value": 770.0,
+      "components": [
+        "Boots"
+      ],
+      "stats": {
+        "attack_speed": 0.25,
+        "movement_speed": 45.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/2c/Berserker%27s_Greaves_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240918170648",
+      "tags": []
+    },
+    "Boots": {
+      "name": "Boots",
+      "id": 1001,
+      "total_cost": 300.0,
+      "sell_value": 210.0,
+      "components": [],
+      "stats": {
+        "movement_speed": 25.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/9d/Boots_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240825033017",
+      "tags": []
+    },
+    "Boots of Swiftness": {
+      "name": "Boots of Swiftness",
+      "id": 3009,
+      "total_cost": 1000.0,
+      "sell_value": 700.0,
+      "components": [
+        "Boots"
+      ],
+      "stats": {
+        "movement_speed": 60.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/ae/Boots_of_Swiftness_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201116171938",
+      "tags": []
+    },
+    "Ionian Boots of Lucidity": {
+      "name": "Ionian Boots of Lucidity",
+      "id": 3158,
+      "total_cost": 900.0,
+      "sell_value": 630.0,
+      "components": [
+        "Boots"
+      ],
+      "stats": {
+        "ability_haste": 10.0,
+        "movement_speed": 45.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/d/d1/Ionian_Boots_of_Lucidity_item_HD.png/revision/latest/scale-to-width-down/64?cb=20210825182132",
+      "tags": []
+    },
+    "Mercury's Treads": {
+      "name": "Mercury's Treads",
+      "id": 3111,
+      "total_cost": 1300.0,
+      "sell_value": 910.0,
+      "components": [
+        "Boots"
+      ],
+      "stats": {
+        "mr": 20.0,
+        "movement_speed": 45.0,
+        "tenacity": 0.3
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/8e/Mercury%27s_Treads_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201116182101",
+      "tags": []
+    },
+    "Plated Steelcaps": {
+      "name": "Plated Steelcaps",
+      "id": 3047,
+      "total_cost": 1200.0,
+      "sell_value": 840.0,
+      "components": [
+        "Boots"
+      ],
+      "stats": {
+        "armor": 25.0,
+        "movement_speed": 45.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/d/dc/Plated_Steelcaps_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111000436",
+      "tags": []
+    },
+    "Sorcerer's Shoes": {
+      "name": "Sorcerer's Shoes",
+      "id": 3020,
+      "total_cost": 1100.0,
+      "sell_value": 770.0,
+      "components": [
+        "Boots"
+      ],
+      "stats": {
+        "magic_pen": 12.0,
+        "movement_speed": 45.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/bb/Sorcerer%27s_Shoes_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240915180245",
+      "tags": []
+    },
+    "Symbiotic Soles": {
+      "name": "Symbiotic Soles",
+      "id": 3010,
+      "total_cost": 900.0,
+      "sell_value": 630.0,
+      "components": [
+        "Boots"
+      ],
+      "stats": {
+        "movement_speed": 35.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/bf/Symbiotic_Soles_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240826183608",
+      "tags": []
+    },
+    "Synchronized Souls": {
+      "name": "Synchronized Souls",
+      "id": 3013,
+      "total_cost": 900.0,
+      "sell_value": 630.0,
+      "components": [
+        "Symbiotic Soles",
+        "Boots"
+      ],
+      "stats": {
+        "movement_speed": 8211.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/1/17/Synchronized_Souls_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240506150441",
+      "tags": []
+    },
+    "Zephyr": {
+      "name": "Zephyr",
+      "id": 3172,
+      "total_cost": 3100.0,
+      "sell_value": 2170.0,
+      "components": [
+        "Berserker's Greaves",
+        "Boots"
+      ],
+      "stats": {
+        "attack_speed": 0.45,
+        "movement_speed": 0.25,
+        "tenacity": 0.35
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/1/11/Zephyr_item.png/revision/latest?cb=20240511184034",
+      "tags": []
+    },
+    "Amplifying Tome": {
+      "name": "Amplifying Tome",
+      "id": 1052,
+      "total_cost": 400.0,
+      "sell_value": 280.0,
+      "components": [],
+      "stats": {
+        "ap": 20.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/79/Amplifying_Tome_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109215341",
+      "tags": []
+    },
+    "B. F. Sword": {
+      "name": "B. F. Sword",
+      "id": 1038,
+      "total_cost": 1300.0,
+      "sell_value": 910.0,
+      "components": [],
+      "stats": {
+        "ad": 40.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/4/49/B._F._Sword_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201116170859",
+      "tags": []
+    },
+    "Blasting Wand": {
+      "name": "Blasting Wand",
+      "id": 1026,
+      "total_cost": 850.0,
+      "sell_value": 595.0,
+      "components": [],
+      "stats": {
+        "ap": 45.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/25/Blasting_Wand_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109215517",
+      "tags": []
+    },
+    "Cloak of Agility": {
+      "name": "Cloak of Agility",
+      "id": 1018,
+      "total_cost": 600.0,
+      "sell_value": 420.0,
+      "components": [],
+      "stats": {
+        "crit_chance": 0.15
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/39/Cloak_of_Agility_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110221906",
+      "tags": []
+    },
+    "Cloth Armor": {
+      "name": "Cloth Armor",
+      "id": 1029,
+      "total_cost": 300.0,
+      "sell_value": 210.0,
+      "components": [],
+      "stats": {
+        "armor": 15.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/1/13/Cloth_Armor_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201116173802",
+      "tags": []
+    },
+    "Dagger": {
+      "name": "Dagger",
+      "id": 1042,
+      "total_cost": 250.0,
+      "sell_value": 175.0,
+      "components": [],
+      "stats": {
+        "attack_speed": 0.1
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/35/Dagger_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201116174346",
+      "tags": []
+    },
+    "Faerie Charm": {
+      "name": "Faerie Charm",
+      "id": 1004,
+      "total_cost": 200.0,
+      "sell_value": 140.0,
+      "components": [],
+      "stats": {
+        "mp_regen": 0.5
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/1/16/Faerie_Charm_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922040239",
+      "tags": []
+    },
+    "Glowing Mote": {
+      "name": "Glowing Mote",
+      "id": 2022,
+      "total_cost": 250.0,
+      "sell_value": 175.0,
+      "components": [],
+      "stats": {
+        "ability_haste": 5.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/e5/Glowing_Mote_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214847",
+      "tags": []
+    },
+    "Long Sword": {
+      "name": "Long Sword",
+      "id": 1036,
+      "total_cost": 350.0,
+      "sell_value": 245.0,
+      "components": [],
+      "stats": {
+        "ad": 10.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/fd/Long_Sword_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201116180330",
+      "tags": []
+    },
+    "Needlessly Large Rod": {
+      "name": "Needlessly Large Rod",
+      "id": 1058,
+      "total_cost": 1200.0,
+      "sell_value": 840.0,
+      "components": [],
+      "stats": {
+        "ap": 65.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/28/Needlessly_Large_Rod_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109210419",
+      "tags": []
+    },
+    "Null-Magic Mantle": {
+      "name": "Null-Magic Mantle",
+      "id": 1033,
+      "total_cost": 400.0,
+      "sell_value": 280.0,
+      "components": [],
+      "stats": {
+        "mr": 20.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/35/Null-Magic_Mantle_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922035813",
+      "tags": []
+    },
+    "Pickaxe": {
+      "name": "Pickaxe",
+      "id": 1037,
+      "total_cost": 875.0,
+      "sell_value": 612.5,
+      "components": [],
+      "stats": {
+        "ad": 25.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/3d/Pickaxe_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240915002455",
+      "tags": []
+    },
+    "Rejuvenation Bead": {
+      "name": "Rejuvenation Bead",
+      "id": 1006,
+      "total_cost": 300.0,
+      "sell_value": 120.0,
+      "components": [],
+      "stats": {
+        "hp_regen": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/a4/Rejuvenation_Bead_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201116183256",
+      "tags": []
+    },
+    "Ruby Crystal": {
+      "name": "Ruby Crystal",
+      "id": 1028,
+      "total_cost": 400.0,
+      "sell_value": 280.0,
+      "components": [],
+      "stats": {
+        "hp": 150.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/78/Ruby_Crystal_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221230175925",
+      "tags": []
+    },
+    "Sapphire Crystal": {
+      "name": "Sapphire Crystal",
+      "id": 1027,
+      "total_cost": 300.0,
+      "sell_value": 210.0,
+      "components": [],
+      "stats": {
+        "mana": 300.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/c/ce/Sapphire_Crystal_item_HD.png/revision/latest/scale-to-width-down/64?cb=20210728195615",
+      "tags": []
+    },
+    "Aegis of the Legion": {
+      "name": "Aegis of the Legion",
+      "id": 3105,
+      "total_cost": 1100.0,
+      "sell_value": 770.0,
+      "components": [
+        "Null-Magic Mantle"
+      ],
+      "stats": {
+        "ability_haste": 10.0,
+        "armor": 25.0,
+        "mr": 25.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/22/Aegis_of_the_Legion_item.png/revision/latest?cb=20201104231855",
+      "tags": []
+    },
+    "Aether Wisp": {
+      "name": "Aether Wisp",
+      "id": 3113,
+      "total_cost": 900.0,
+      "sell_value": 630.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 30.0,
+        "movement_speed": 0.04
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/6/6b/Aether_Wisp_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240827153336",
+      "tags": []
+    },
+    "Bami's Cinder": {
+      "name": "Bami's Cinder",
+      "id": 6660,
+      "total_cost": 900.0,
+      "sell_value": 630.0,
+      "components": [
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ability_haste": 5.0,
+        "hp": 160.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/96/Bami%27s_Cinder_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110215348",
+      "tags": []
+    },
+    "Bandleglass Mirror": {
+      "name": "Bandleglass Mirror",
+      "id": 4642,
+      "total_cost": 900.0,
+      "sell_value": 630.0,
+      "components": [
+        "Faerie Charm"
+      ],
+      "stats": {
+        "ap": 20.0,
+        "ability_haste": 10.0,
+        "mp_regen": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/94/Bandleglass_Mirror_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201116172434",
+      "tags": []
+    },
+    "Blighting Jewel": {
+      "name": "Blighting Jewel",
+      "id": 4630,
+      "total_cost": 1100.0,
+      "sell_value": 770.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 25.0,
+        "magic_pen": 0.13
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/a8/Blighting_Jewel_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110220745",
+      "tags": []
+    },
+    "Bramble Vest": {
+      "name": "Bramble Vest",
+      "id": 3076,
+      "total_cost": 800.0,
+      "sell_value": 560.0,
+      "components": [
+        "Cloth Armor"
+      ],
+      "stats": {
+        "armor": 30.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/71/Bramble_Vest_item_HD.png/revision/latest/scale-to-width-down/64?cb=20210728165602",
+      "tags": []
+    },
+    "Catalyst of Aeons": {
+      "name": "Catalyst of Aeons",
+      "id": 3803,
+      "total_cost": 1300.0,
+      "sell_value": 910.0,
+      "components": [
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "hp": 82.11,
+        "mana": 300.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/79/Catalyst_of_Aeons_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221115195201",
+      "tags": []
+    },
+    "Caulfield's Warhammer": {
+      "name": "Caulfield's Warhammer",
+      "id": 3133,
+      "total_cost": 1050.0,
+      "sell_value": 735.0,
+      "components": [
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 20.0,
+        "ability_haste": 10.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/8d/Caulfield%27s_Warhammer_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201116173132",
+      "tags": []
+    },
+    "Chain Vest": {
+      "name": "Chain Vest",
+      "id": 1031,
+      "total_cost": 800.0,
+      "sell_value": 560.0,
+      "components": [
+        "Cloth Armor"
+      ],
+      "stats": {
+        "armor": 40.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/77/Chain_Vest_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221230180206",
+      "tags": []
+    },
+    "Crystalline Bracer": {
+      "name": "Crystalline Bracer",
+      "id": 3801,
+      "total_cost": 800.0,
+      "sell_value": 560.0,
+      "components": [
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "hp": 200.0,
+        "hp_regen": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/c/c1/Crystalline_Bracer_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922040918",
+      "tags": []
+    },
+    "Executioner's Calling": {
+      "name": "Executioner's Calling",
+      "id": 3123,
+      "total_cost": 800.0,
+      "sell_value": 560.0,
+      "components": [
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 15.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/d/d5/Executioner%27s_Calling_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110223810",
+      "tags": []
+    },
+    "Fated Ashes": {
+      "name": "Fated Ashes",
+      "id": 2508,
+      "total_cost": 900.0,
+      "sell_value": 630.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 30.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/0/06/Fated_Ashes_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240506150430",
+      "tags": []
+    },
+    "Fiendish Codex": {
+      "name": "Fiendish Codex",
+      "id": 3108,
+      "total_cost": 850.0,
+      "sell_value": 595.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 25.0,
+        "ability_haste": 10.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/89/Fiendish_Codex_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240916223726",
+      "tags": []
+    },
+    "Forbidden Idol": {
+      "name": "Forbidden Idol",
+      "id": 3114,
+      "total_cost": 600.0,
+      "sell_value": 420.0,
+      "components": [
+        "Faerie Charm"
+      ],
+      "stats": {
+        "mp_regen": 0.5
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/fb/Forbidden_Idol_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110224151",
+      "tags": []
+    },
+    "Giant's Belt": {
+      "name": "Giant's Belt",
+      "id": 1011,
+      "total_cost": 900.0,
+      "sell_value": 630.0,
+      "components": [
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "hp": 350.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/b5/Giant%27s_Belt_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110225043",
+      "tags": []
+    },
+    "Glacial Buckler": {
+      "name": "Glacial Buckler",
+      "id": 3024,
+      "total_cost": 900.0,
+      "sell_value": 630.0,
+      "components": [
+        "Cloth Armor"
+      ],
+      "stats": {
+        "ability_haste": 10.0,
+        "armor": 25.0,
+        "mana": 300.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/2b/Glacial_Buckler_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240827151522",
+      "tags": []
+    },
+    "Haunting Guise": {
+      "name": "Haunting Guise",
+      "id": 3147,
+      "total_cost": 1300.0,
+      "sell_value": 910.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 30.0,
+        "hp": 200.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/39/Haunting_Guise_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204222821",
+      "tags": []
+    },
+    "Hearthbound Axe": {
+      "name": "Hearthbound Axe",
+      "id": 3051,
+      "total_cost": 1200.0,
+      "sell_value": 840.0,
+      "components": [
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 20.0,
+        "attack_speed": 0.2
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/b8/Hearthbound_Axe_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109212202",
+      "tags": []
+    },
+    "Hexdrinker": {
+      "name": "Hexdrinker",
+      "id": 3155,
+      "total_cost": 1300.0,
+      "sell_value": 910.0,
+      "components": [
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 0.75,
+        "mr": 30.0,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/c/cc/Hexdrinker_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221230172638",
+      "tags": []
+    },
+    "Hextech Alternator": {
+      "name": "Hextech Alternator",
+      "id": 3145,
+      "total_cost": 1100.0,
+      "sell_value": 770.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 45.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/fa/Hextech_Alternator_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109215050",
+      "tags": []
+    },
+    "Kindlegem": {
+      "name": "Kindlegem",
+      "id": 3067,
+      "total_cost": 800.0,
+      "sell_value": 560.0,
+      "components": [
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ability_haste": 10.0,
+        "hp": 200.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/74/Kindlegem_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221230180333",
+      "tags": []
+    },
+    "Last Whisper": {
+      "name": "Last Whisper",
+      "id": 3035,
+      "total_cost": 1450.0,
+      "sell_value": 1015.0,
+      "components": [
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 20.0,
+        "armor_pen": 0.18
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/3c/Last_Whisper_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922045528",
+      "tags": []
+    },
+    "Lost Chapter": {
+      "name": "Lost Chapter",
+      "id": 3802,
+      "total_cost": 1200.0,
+      "sell_value": 840.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 40.0,
+        "ability_haste": 10.0,
+        "mana": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/a3/Lost_Chapter_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201116180528",
+      "tags": []
+    },
+    "Negatron Cloak": {
+      "name": "Negatron Cloak",
+      "id": 1057,
+      "total_cost": 850.0,
+      "sell_value": 595.0,
+      "components": [
+        "Null-Magic Mantle"
+      ],
+      "stats": {
+        "mr": 45.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/33/Negatron_Cloak_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110235211",
+      "tags": []
+    },
+    "Noonquiver": {
+      "name": "Noonquiver",
+      "id": 6670,
+      "total_cost": 1300.0,
+      "sell_value": 910.0,
+      "components": [
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 15.0,
+        "crit_chance": 0.2
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/77/Noonquiver_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240825035312",
+      "tags": []
+    },
+    "Oblivion Orb": {
+      "name": "Oblivion Orb",
+      "id": 3916,
+      "total_cost": 800.0,
+      "sell_value": 560.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 25.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/3c/Oblivion_Orb_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110235739",
+      "tags": []
+    },
+    "Phage": {
+      "name": "Phage",
+      "id": 3044,
+      "total_cost": 1100.0,
+      "sell_value": 770.0,
+      "components": [
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ad": 15.0,
+        "hp": 200.0,
+        "movement_speed": 8211.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/27/Phage_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111000240",
+      "tags": []
+    },
+    "Quicksilver Sash": {
+      "name": "Quicksilver Sash",
+      "id": 3140,
+      "total_cost": 1300.0,
+      "sell_value": 910.0,
+      "components": [
+        "Null-Magic Mantle"
+      ],
+      "stats": {
+        "mr": 30.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/a8/Quicksilver_Sash_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111000632",
+      "tags": []
+    },
+    "Rectrix": {
+      "name": "Rectrix",
+      "id": 6690,
+      "total_cost": 775.0,
+      "sell_value": 542.5,
+      "components": [
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 15.0,
+        "movement_speed": 0.04
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/ba/Rectrix_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240827150308",
+      "tags": []
+    },
+    "Recurve Bow": {
+      "name": "Recurve Bow",
+      "id": 1043,
+      "total_cost": 700.0,
+      "sell_value": 490.0,
+      "components": [
+        "Dagger"
+      ],
+      "stats": {
+        "attack_speed": 0.15
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/8e/Recurve_Bow_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922045819",
+      "tags": []
+    },
+    "Runic Compass": {
+      "name": "Runic Compass",
+      "id": 3866,
+      "total_cost": 400.0,
+      "sell_value": 280.0,
+      "components": [
+        "World Atlas"
+      ],
+      "stats": {
+        "hp": 82.11,
+        "hp_regen": 0.5,
+        "mp_regen": 0.5
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/5/50/Runic_Compass_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214902",
+      "tags": []
+    },
+    "Scout's Slingshot": {
+      "name": "Scout's Slingshot",
+      "id": 3144,
+      "total_cost": 600.0,
+      "sell_value": 420.0,
+      "components": [
+        "Dagger"
+      ],
+      "stats": {
+        "attack_speed": 0.2
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/7d/Scout%27s_Slingshot_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240506150437",
+      "tags": []
+    },
+    "Seeker's Armguard": {
+      "name": "Seeker's Armguard",
+      "id": 2420,
+      "total_cost": 1600.0,
+      "sell_value": 640.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 40.0,
+        "armor": 25.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/5/57/Seeker%27s_Armguard_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111002302",
+      "tags": []
+    },
+    "Serrated Dirk": {
+      "name": "Serrated Dirk",
+      "id": 3134,
+      "total_cost": 1000.0,
+      "sell_value": 700.0,
+      "components": [
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 20.0,
+        "lethality": 10.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/74/Serrated_Dirk_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109213353",
+      "tags": []
+    },
+    "Shattered Armguard": {
+      "name": "Shattered Armguard",
+      "id": 2421,
+      "total_cost": 1600.0,
+      "sell_value": 1120.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 45.0,
+        "armor": 25.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/eb/Shattered_Armguard_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214904",
+      "tags": []
+    },
+    "Sheen": {
+      "name": "Sheen",
+      "id": 3057,
+      "total_cost": 900.0,
+      "sell_value": 630.0,
+      "components": [
+        "Glowing Mote"
+      ],
+      "stats": {
+        "ability_haste": 10.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/a8/Sheen_item_HD.png/revision/latest/scale-to-width-down/64?cb=20210728195354",
+      "tags": []
+    },
+    "Spectre's Cowl": {
+      "name": "Spectre's Cowl",
+      "id": 3211,
+      "total_cost": 1250.0,
+      "sell_value": 875.0,
+      "components": [
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "mr": 35.0,
+        "hp": 200.0,
+        "hp_regen": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/b8/Spectre%27s_Cowl_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240827151844",
+      "tags": []
+    },
+    "Steel Sigil": {
+      "name": "Steel Sigil",
+      "id": 2019,
+      "total_cost": 1100.0,
+      "sell_value": 770.0,
+      "components": [
+        "Cloth Armor"
+      ],
+      "stats": {
+        "ad": 15.0,
+        "armor": 30.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/2e/Steel_Sigil_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214908",
+      "tags": []
+    },
+    "The Brutalizer": {
+      "name": "The Brutalizer",
+      "id": 2020,
+      "total_cost": 1337.0,
+      "sell_value": 935.9,
+      "components": [
+        "Glowing Mote"
+      ],
+      "stats": {
+        "ad": 25.0,
+        "ability_haste": 10.0,
+        "lethality": 5.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/33/The_Brutalizer_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214917",
+      "tags": []
+    },
+    "Tiamat": {
+      "name": "Tiamat",
+      "id": 3077,
+      "total_cost": 1200.0,
+      "sell_value": 840.0,
+      "components": [
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 20.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/d/d1/Tiamat_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109211951",
+      "tags": []
+    },
+    "Tunneler": {
+      "name": "Tunneler",
+      "id": 2021,
+      "total_cost": 1150.0,
+      "sell_value": 805.0,
+      "components": [
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 15.0,
+        "hp": 250.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/f5/Tunneler_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214921",
+      "tags": []
+    },
+    "Vampiric Scepter": {
+      "name": "Vampiric Scepter",
+      "id": 1053,
+      "total_cost": 900.0,
+      "sell_value": 630.0,
+      "components": [
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 15.0,
+        "life_steal": 0.07
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/ec/Vampiric_Scepter_item.png/revision/latest?cb=20201118210813",
+      "tags": []
+    },
+    "Verdant Barrier": {
+      "name": "Verdant Barrier",
+      "id": 4632,
+      "total_cost": 1600.0,
+      "sell_value": 1120.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 40.0,
+        "mr": 25.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/2d/Verdant_Barrier_item_HD.png/revision/latest/scale-to-width-down/64?cb=20210825183357",
+      "tags": []
+    },
+    "Warden's Mail": {
+      "name": "Warden's Mail",
+      "id": 3082,
+      "total_cost": 1000.0,
+      "sell_value": 700.0,
+      "components": [
+        "Cloth Armor"
+      ],
+      "stats": {
+        "armor": 40.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/4/41/Warden%27s_Mail_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111011645",
+      "tags": []
+    },
+    "Watchful Wardstone": {
+      "name": "Watchful Wardstone",
+      "id": 4638,
+      "total_cost": 1100.0,
+      "sell_value": 770.0,
+      "components": [],
+      "stats": {
+        "ability_haste": 10.0,
+        "armor": 10.0,
+        "mr": 15.0,
+        "hp": 150.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/f0/Watchful_Wardstone_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111011927",
+      "tags": []
+    },
+    "Winged Moonplate": {
+      "name": "Winged Moonplate",
+      "id": 3066,
+      "total_cost": 800.0,
+      "sell_value": 560.0,
+      "components": [
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "hp": 200.0,
+        "movement_speed": 0.04
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/6/60/Winged_Moonplate_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221230181308",
+      "tags": []
+    },
+    "Zeal": {
+      "name": "Zeal",
+      "id": 3086,
+      "total_cost": 1200.0,
+      "sell_value": 840.0,
+      "components": [
+        "Cloak of Agility"
+      ],
+      "stats": {
+        "attack_speed": 0.15,
+        "crit_chance": 0.15,
+        "movement_speed": 0.04
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/5/54/Zeal_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111012514",
+      "tags": []
+    },
+    "Abyssal Mask": {
+      "name": "Abyssal Mask",
+      "id": 8020,
+      "total_cost": 2650.0,
+      "sell_value": 1855.0,
+      "components": [
+        "Kindlegem",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ability_haste": 25.67,
+        "mr": 82.11,
+        "hp": 425.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/22/Abyssal_Mask_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221115195027",
+      "tags": []
+    },
+    "Archangel's Staff": {
+      "name": "Archangel's Staff",
+      "id": 3003,
+      "total_cost": 2900.0,
+      "sell_value": 2030.0,
+      "components": [
+        "Tear of the Goddess"
+      ],
+      "stats": {
+        "ap": 82.11,
+        "ability_haste": 25.0,
+        "mana": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/c/c9/Archangel%27s_Staff_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111002421",
+      "tags": []
+    },
+    "Ardent Censer": {
+      "name": "Ardent Censer",
+      "id": 3504,
+      "total_cost": 2200.0,
+      "sell_value": 1540.0,
+      "components": [
+        "Aether Wisp",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 95.0,
+        "mp_regen": 1.25,
+        "movement_speed": 0.04,
+        "attack_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/fb/Ardent_Censer_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110215606",
+      "tags": []
+    },
+    "Axiom Arc": {
+      "name": "Axiom Arc",
+      "id": 6696,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "The Brutalizer",
+        "Glowing Mote"
+      ],
+      "stats": {
+        "ad": 69.29,
+        "ability_haste": 36.0,
+        "lethality": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/b2/Axiom_Arc_item_HD.png/revision/latest/scale-to-width-down/64?cb=20211116191653",
+      "tags": []
+    },
+    "Banshee's Veil": {
+      "name": "Banshee's Veil",
+      "id": 3102,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Needlessly Large Rod"
+      ],
+      "stats": {
+        "ap": 130.0,
+        "mr": 67.78
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/fd/Banshee%27s_Veil_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109210523",
+      "tags": []
+    },
+    "Black Cleaver": {
+      "name": "Black Cleaver",
+      "id": 3071,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Phage",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ad": 49.52,
+        "ability_haste": 30.67,
+        "hp": 525.0,
+        "armor": 82.11,
+        "movement_speed": 8211.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/0/00/Black_Cleaver_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110220105",
+      "tags": []
+    },
+    "Blackfire Torch": {
+      "name": "Blackfire Torch",
+      "id": 2503,
+      "total_cost": 2800.0,
+      "sell_value": 1960.0,
+      "components": [
+        "Lost Chapter",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 160.0,
+        "ability_haste": 36.0,
+        "mana": 600.0,
+        "hp": 0.04
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/83/Blackfire_Torch_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240506150426",
+      "tags": []
+    },
+    "Blade of the Ruined King": {
+      "name": "Blade of the Ruined King",
+      "id": 3153,
+      "total_cost": 3200.0,
+      "sell_value": 2240.0,
+      "components": [
+        "Vampiric Scepter",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 54.29,
+        "attack_speed": 0.4167,
+        "life_steal": 0.1,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/9d/Blade_of_the_Ruined_King_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109211240",
+      "tags": []
+    },
+    "Bloodletter's Curse": {
+      "name": "Bloodletter's Curse",
+      "id": 4010,
+      "total_cost": 2900.0,
+      "sell_value": 1450.0,
+      "components": [
+        "Haunting Guise",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 76.67,
+        "ability_haste": 25.67,
+        "hp": 475.0,
+        "mr": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/22/Bloodletter%27s_Veil_item.png/revision/latest?cb=20180517220505",
+      "tags": []
+    },
+    "Bloodsong": {
+      "name": "Bloodsong",
+      "id": 3877,
+      "total_cost": 400.0,
+      "sell_value": 280.0,
+      "components": [
+        "Bounty of Worlds",
+        "Runic Compass",
+        "World Atlas"
+      ],
+      "stats": {
+        "hp": 200.0,
+        "hp_regen": 0.75,
+        "mp_regen": 0.75
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/d/d7/Bloodsong_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214410",
+      "tags": []
+    },
+    "Bloodthirster": {
+      "name": "Bloodthirster",
+      "id": 3072,
+      "total_cost": 3400.0,
+      "sell_value": 2380.0,
+      "components": [
+        "B. F. Sword"
+      ],
+      "stats": {
+        "ad": 108.57,
+        "life_steal": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/b9/Bloodthirster_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922042553",
+      "tags": []
+    },
+    "Bounty of Worlds": {
+      "name": "Bounty of Worlds",
+      "id": 3867,
+      "total_cost": 400.0,
+      "sell_value": 280.0,
+      "components": [
+        "Runic Compass",
+        "World Atlas"
+      ],
+      "stats": {
+        "hp": 200.0,
+        "hp_regen": 0.75,
+        "mp_regen": 0.75
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/73/Bounty_of_Worlds_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214831",
+      "tags": []
+    },
+    "Celestial Opposition": {
+      "name": "Celestial Opposition",
+      "id": 3869,
+      "total_cost": 400.0,
+      "sell_value": 280.0,
+      "components": [
+        "Bounty of Worlds",
+        "Runic Compass",
+        "World Atlas"
+      ],
+      "stats": {
+        "hp": 200.0,
+        "hp_regen": 0.75,
+        "mp_regen": 0.75
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/f8/Celestial_Opposition_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214836",
+      "tags": []
+    },
+    "Chempunk Chainsword": {
+      "name": "Chempunk Chainsword",
+      "id": 6609,
+      "total_cost": 3100.0,
+      "sell_value": 2170.0,
+      "components": [
+        "Executioner's Calling",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 54.52,
+        "ability_haste": 25.67,
+        "hp": 575.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/32/Chempunk_Chainsword_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110221734",
+      "tags": []
+    },
+    "Cosmic Drive": {
+      "name": "Cosmic Drive",
+      "id": 4629,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Kindlegem",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ap": 86.67,
+        "ability_haste": 35.67,
+        "hp": 475.0,
+        "movement_speed": 8211.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/ab/Cosmic_Drive_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240917004710",
+      "tags": []
+    },
+    "Cryptbloom": {
+      "name": "Cryptbloom",
+      "id": 3137,
+      "total_cost": 2850.0,
+      "sell_value": 1995.0,
+      "components": [
+        "Blighting Jewel",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 85.0,
+        "ability_haste": 31.0,
+        "magic_pen": 0.3
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/0/07/Cryptbloom_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214726",
+      "tags": []
+    },
+    "Dawncore": {
+      "name": "Dawncore",
+      "id": 6621,
+      "total_cost": 2500.0,
+      "sell_value": 1750.0,
+      "components": [
+        "Blasting Wand"
+      ],
+      "stats": {
+        "ap": 82.11,
+        "mp_regen": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/a7/Dawncore_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214840",
+      "tags": []
+    },
+    "Dead Man's Plate": {
+      "name": "Dead Man's Plate",
+      "id": 3742,
+      "total_cost": 2900.0,
+      "sell_value": 2030.0,
+      "components": [
+        "Winged Moonplate",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "armor": 80.0,
+        "hp": 535.0,
+        "movement_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/5/54/Dead_Man%27s_Plate_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109212711",
+      "tags": []
+    },
+    "Death's Dance": {
+      "name": "Death's Dance",
+      "id": 6333,
+      "total_cost": 3300.0,
+      "sell_value": 2310.0,
+      "components": [
+        "Steel Sigil",
+        "Cloth Armor"
+      ],
+      "stats": {
+        "ad": 69.52,
+        "ability_haste": 25.67,
+        "armor": 66.67
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/74/Death%27s_Dance_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922034453",
+      "tags": []
+    },
+    "Dream Maker": {
+      "name": "Dream Maker",
+      "id": 3870,
+      "total_cost": 400.0,
+      "sell_value": 280.0,
+      "components": [
+        "Bounty of Worlds",
+        "Runic Compass",
+        "World Atlas"
+      ],
+      "stats": {
+        "hp": 200.0,
+        "hp_regen": 0.75,
+        "mp_regen": 0.75
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/fd/Dream_Maker_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240827150125",
+      "tags": []
+    },
+    "Echoes of Helia": {
+      "name": "Echoes of Helia",
+      "id": 6620,
+      "total_cost": 2200.0,
+      "sell_value": 1540.0,
+      "components": [
+        "Kindlegem",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ap": 51.67,
+        "ability_haste": 30.67,
+        "hp": 325.0,
+        "mp_regen": 1.25
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/4/4d/Echoes_of_Helia_item_HD.png/revision/latest/scale-to-width-down/64?cb=20230518120814",
+      "tags": []
+    },
+    "Eclipse": {
+      "name": "Eclipse",
+      "id": 6692,
+      "total_cost": 2900.0,
+      "sell_value": 2030.0,
+      "components": [
+        "Caulfield's Warhammer",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 74.29,
+        "ability_haste": 31.0,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/c/c2/Eclipse_item.png/revision/latest?cb=20201118204016",
+      "tags": []
+    },
+    "Edge of Night": {
+      "name": "Edge of Night",
+      "id": 3814,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Serrated Dirk",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 64.29,
+        "lethality": 15.0,
+        "hp": 435.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/b2/Edge_of_Night_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110223151",
+      "tags": []
+    },
+    "Essence Reaver": {
+      "name": "Essence Reaver",
+      "id": 3508,
+      "total_cost": 2900.0,
+      "sell_value": 2030.0,
+      "components": [
+        "Pickaxe"
+      ],
+      "stats": {
+        "ad": 74.29,
+        "ability_haste": 31.0,
+        "crit_chance": 0.25,
+        "mana": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/2a/Essence_Reaver_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109214442",
+      "tags": []
+    },
+    "Experimental Hexplate": {
+      "name": "Experimental Hexplate",
+      "id": 3073,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Tunneler",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 49.52,
+        "attack_speed": 0.3111,
+        "hp": 575.0,
+        "movement_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/fc/Experimental_Hexplate_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240916221318",
+      "tags": []
+    },
+    "Fimbulwinter": {
+      "name": "Fimbulwinter",
+      "id": 3121,
+      "total_cost": 2400.0,
+      "sell_value": 1680.0,
+      "components": [
+        "Winter's Approach",
+        "Tear of the Goddess"
+      ],
+      "stats": {
+        "ability_haste": 31.0,
+        "hp": 82.11,
+        "mana": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/ea/Fimbulwinter_item_HD.png/revision/latest/scale-to-width-down/64?cb=20211116191950",
+      "tags": []
+    },
+    "Force of Nature": {
+      "name": "Force of Nature",
+      "id": 4401,
+      "total_cost": 2800.0,
+      "sell_value": 1960.0,
+      "components": [
+        "Negatron Cloak",
+        "Null-Magic Mantle"
+      ],
+      "stats": {
+        "mr": 90.0,
+        "hp": 0.015,
+        "movement_speed": 0.08,
+        "hp_regen": 160.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/bf/Force_of_Nature_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109212810",
+      "tags": []
+    },
+    "Frozen Heart": {
+      "name": "Frozen Heart",
+      "id": 3110,
+      "total_cost": 2500.0,
+      "sell_value": 1750.0,
+      "components": [
+        "Warden's Mail",
+        "Cloth Armor"
+      ],
+      "stats": {
+        "ability_haste": 36.0,
+        "armor": 100.0,
+        "mana": 400.0,
+        "attack_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/86/Frozen_Heart_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240917003558",
+      "tags": []
+    },
+    "Guardian Angel": {
+      "name": "Guardian Angel",
+      "id": 3026,
+      "total_cost": 3200.0,
+      "sell_value": 1280.0,
+      "components": [
+        "Steel Sigil",
+        "Cloth Armor"
+      ],
+      "stats": {
+        "ad": 69.29,
+        "armor": 70.0,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/c/c4/Guardian_Angel_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109213832",
+      "tags": []
+    },
+    "Guinsoo's Rageblade": {
+      "name": "Guinsoo's Rageblade",
+      "id": 3124,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ad": 39.52,
+        "ap": 46.67,
+        "attack_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/6/64/Guinsoo%27s_Rageblade_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110230134",
+      "tags": []
+    },
+    "Heartsteel": {
+      "name": "Heartsteel",
+      "id": 3084,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Giant's Belt",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "hp": 82.11,
+        "hp_regen": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/87/Heartsteel_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221115195510",
+      "tags": []
+    },
+    "Hextech Rocketbelt": {
+      "name": "Hextech Rocketbelt",
+      "id": 3152,
+      "total_cost": 2600.0,
+      "sell_value": 1820.0,
+      "components": [
+        "Hextech Alternator",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 76.67,
+        "ability_haste": 25.67,
+        "hp": 475.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/d/df/Hextech_Rocketbelt_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922043316",
+      "tags": []
+    },
+    "Hollow Radiance": {
+      "name": "Hollow Radiance",
+      "id": 6664,
+      "total_cost": 2800.0,
+      "sell_value": 1960.0,
+      "components": [
+        "Bami's Cinder",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ability_haste": 20.67,
+        "mr": 58.52,
+        "hp": 82.11,
+        "hp_regen": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/e7/Hollow_Radiance_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231205225746",
+      "tags": []
+    },
+    "Horizon Focus": {
+      "name": "Horizon Focus",
+      "id": 4628,
+      "total_cost": 2700.0,
+      "sell_value": 1890.0,
+      "components": [
+        "Fiendish Codex",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 100.0,
+        "ability_haste": 41.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/e8/Horizon_Focus_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240917004232",
+      "tags": []
+    },
+    "Hubris": {
+      "name": "Hubris",
+      "id": 6697,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Serrated Dirk",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 82.11,
+        "ability_haste": 26.0,
+        "lethality": 18.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/7d/Hubris_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214849",
+      "tags": []
+    },
+    "Hullbreaker": {
+      "name": "Hullbreaker",
+      "id": 3181,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Tunneler",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 54.29,
+        "hp": 82.11,
+        "movement_speed": 0.04,
+        "mr": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/e0/Hullbreaker_item_HD.png/revision/latest/scale-to-width-down/64?cb=20210824190552",
+      "tags": []
+    },
+    "Iceborn Gauntlet": {
+      "name": "Iceborn Gauntlet",
+      "id": 6662,
+      "total_cost": 2900.0,
+      "sell_value": 2030.0,
+      "components": [
+        "Sheen",
+        "Glowing Mote"
+      ],
+      "stats": {
+        "ability_haste": 25.67,
+        "armor": 82.11,
+        "hp": 425.0,
+        "mana": 500.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/8d/Iceborn_Gauntlet_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221117180527",
+      "tags": []
+    },
+    "Immortal Shieldbow": {
+      "name": "Immortal Shieldbow",
+      "id": 6673,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Pickaxe"
+      ],
+      "stats": {
+        "ad": 83.57,
+        "crit_chance": 0.25,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/2b/Immortal_Shieldbow_item.png/revision/latest?cb=20201118205028",
+      "tags": []
+    },
+    "Imperial Mandate": {
+      "name": "Imperial Mandate",
+      "id": 4005,
+      "total_cost": 2250.0,
+      "sell_value": 1575.0,
+      "components": [
+        "Fiendish Codex",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 85.0,
+        "ability_haste": 36.0,
+        "mp_regen": 1.25,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/bc/Imperial_Mandate_item.png/revision/latest?cb=20201104212814",
+      "tags": []
+    },
+    "Infinity Edge": {
+      "name": "Infinity Edge",
+      "id": 3031,
+      "total_cost": 3600.0,
+      "sell_value": 2520.0,
+      "components": [
+        "B. F. Sword"
+      ],
+      "stats": {
+        "ad": 98.57,
+        "crit_chance": 0.25,
+        "crit_damage": 0.4
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/aa/Infinity_Edge_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109213737",
+      "tags": []
+    },
+    "Jak'Sho, The Protean": {
+      "name": "Jak'Sho, The Protean",
+      "id": 6665,
+      "total_cost": 3200.0,
+      "sell_value": 2240.0,
+      "components": [
+        "Giant's Belt",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "armor": 61.67,
+        "mr": 82.11,
+        "hp": 475.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/4/4a/Jak%27Sho%2C_The_Protean_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221115193817",
+      "tags": []
+    },
+    "Kaenic Rookern": {
+      "name": "Kaenic Rookern",
+      "id": 2504,
+      "total_cost": 2900.0,
+      "sell_value": 2030.0,
+      "components": [
+        "Spectre's Cowl",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "mr": 107.78,
+        "hp": 82.11,
+        "hp_regen": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/a8/Kaenic_Rookern_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214851",
+      "tags": []
+    },
+    "Knight's Vow": {
+      "name": "Knight's Vow",
+      "id": 3109,
+      "total_cost": 2300.0,
+      "sell_value": 1610.0,
+      "components": [
+        "Kindlegem",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ability_haste": 20.67,
+        "armor": 56.67,
+        "hp": 82.11,
+        "hp_regen": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/90/Knight%27s_Vow_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109213037",
+      "tags": []
+    },
+    "Kraken Slayer": {
+      "name": "Kraken Slayer",
+      "id": 6672,
+      "total_cost": 3100.0,
+      "sell_value": 2170.0,
+      "components": [
+        "Rectrix",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 59.29,
+        "attack_speed": 0.5667,
+        "movement_speed": 0.04,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/e9/Kraken_Slayer_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110232124",
+      "tags": []
+    },
+    "Liandry's Torment": {
+      "name": "Liandry's Torment",
+      "id": 6653,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Haunting Guise",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 95.0,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/d/d8/Liandry%27s_Torment_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922043519",
+      "tags": []
+    },
+    "Lich Bane": {
+      "name": "Lich Bane",
+      "id": 3100,
+      "total_cost": 3200.0,
+      "sell_value": 2240.0,
+      "components": [
+        "Sheen",
+        "Glowing Mote"
+      ],
+      "stats": {
+        "ap": 140.0,
+        "ability_haste": 26.0,
+        "movement_speed": 0.04,
+        "attack_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/8d/Lich_Bane_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109211107",
+      "tags": []
+    },
+    "Locket of the Iron Solari": {
+      "name": "Locket of the Iron Solari",
+      "id": 3190,
+      "total_cost": 2200.0,
+      "sell_value": 1540.0,
+      "components": [
+        "Kindlegem",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ability_haste": 18.0,
+        "armor": 37.5,
+        "mr": 38.89,
+        "hp": 290.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/95/Locket_of_the_Iron_Solari_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109212528",
+      "tags": []
+    },
+    "Lord Dominik's Regards": {
+      "name": "Lord Dominik's Regards",
+      "id": 3036,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Last Whisper",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 63.57,
+        "armor_pen": 0.35,
+        "crit_chance": 0.25
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/3c/Lord_Dominik%27s_Regards_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109214027",
+      "tags": []
+    },
+    "Luden's Companion": {
+      "name": "Luden's Companion",
+      "id": 6655,
+      "total_cost": 2850.0,
+      "sell_value": 1995.0,
+      "components": [
+        "Lost Chapter",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 125.0,
+        "ability_haste": 26.0,
+        "mana": 600.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/f4/Luden%27s_Companion_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240916225518",
+      "tags": []
+    },
+    "Malignance": {
+      "name": "Malignance",
+      "id": 3118,
+      "total_cost": 2700.0,
+      "sell_value": 1890.0,
+      "components": [
+        "Lost Chapter",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 110.0,
+        "ability_haste": 31.0,
+        "mana": 600.0,
+        "mr": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/7a/Malignance_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214853",
+      "tags": []
+    },
+    "Manamune": {
+      "name": "Manamune",
+      "id": 3004,
+      "total_cost": 2900.0,
+      "sell_value": 2030.0,
+      "components": [
+        "Tear of the Goddess"
+      ],
+      "stats": {
+        "ad": 82.11,
+        "ability_haste": 15.0,
+        "mana": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/34/Manamune_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922042507",
+      "tags": []
+    },
+    "Maw of Malmortius": {
+      "name": "Maw of Malmortius",
+      "id": 3156,
+      "total_cost": 3100.0,
+      "sell_value": 2170.0,
+      "components": [
+        "Hexdrinker",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 69.52,
+        "ability_haste": 25.67,
+        "mr": 58.52,
+        "omnivamp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/5/51/Maw_of_Malmortius_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240827151928",
+      "tags": []
+    },
+    "Mejai's Soulstealer": {
+      "name": "Mejai's Soulstealer",
+      "id": 3041,
+      "total_cost": 1500.0,
+      "sell_value": 1050.0,
+      "components": [
+        "Dark Seal"
+      ],
+      "stats": {
+        "ap": 20.0,
+        "hp": 100.0,
+        "movement_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/88/Mejai%27s_Soulstealer_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221103165010",
+      "tags": []
+    },
+    "Mercurial Scimitar": {
+      "name": "Mercurial Scimitar",
+      "id": 3139,
+      "total_cost": 3200.0,
+      "sell_value": 2240.0,
+      "components": [
+        "Quicksilver Sash",
+        "Null-Magic Mantle"
+      ],
+      "stats": {
+        "ad": 54.29,
+        "mr": 67.78,
+        "life_steal": 0.1,
+        "movement_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/4/46/Mercurial_Scimitar_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110234009",
+      "tags": []
+    },
+    "Mikael's Blessing": {
+      "name": "Mikael's Blessing",
+      "id": 3222,
+      "total_cost": 2300.0,
+      "sell_value": 1610.0,
+      "components": [
+        "Kindlegem",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ability_haste": 31.0,
+        "hp": 435.0,
+        "mp_regen": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/e5/Mikael%27s_Blessing_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922034151",
+      "tags": []
+    },
+    "Moonstone Renewer": {
+      "name": "Moonstone Renewer",
+      "id": 6617,
+      "total_cost": 2200.0,
+      "sell_value": 1540.0,
+      "components": [
+        "Kindlegem",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ap": 41.67,
+        "ability_haste": 30.67,
+        "hp": 325.0,
+        "mp_regen": 1.25
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/d/dd/Moonstone_Renewer_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110234334",
+      "tags": []
+    },
+    "Morellonomicon": {
+      "name": "Morellonomicon",
+      "id": 3165,
+      "total_cost": 2950.0,
+      "sell_value": 2065.0,
+      "components": [
+        "Oblivion Orb",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 91.67,
+        "ability_haste": 25.67,
+        "hp": 475.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/a/a1/Morellonomicon_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110234439",
+      "tags": []
+    },
+    "Mortal Reminder": {
+      "name": "Mortal Reminder",
+      "id": 3033,
+      "total_cost": 3200.0,
+      "sell_value": 2240.0,
+      "components": [
+        "Executioner's Calling",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 63.57,
+        "armor_pen": 0.3,
+        "crit_chance": 0.25
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/f3/Mortal_Reminder_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110234613",
+      "tags": []
+    },
+    "Muramana": {
+      "name": "Muramana",
+      "id": 3042,
+      "total_cost": 2900.0,
+      "sell_value": 2030.0,
+      "components": [
+        "Manamune",
+        "Tear of the Goddess"
+      ],
+      "stats": {
+        "ad": 82.11,
+        "ability_haste": 31.0,
+        "mana": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/0/07/Muramana_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922035250",
+      "tags": []
+    },
+    "Nashor's Tooth": {
+      "name": "Nashor's Tooth",
+      "id": 3115,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Recurve Bow",
+        "Dagger"
+      ],
+      "stats": {
+        "ap": 96.67,
+        "ability_haste": 25.67,
+        "attack_speed": 0.6111
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/82/Nashor%27s_Tooth_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201110234914",
+      "tags": []
+    },
+    "Navori Flickerblade": {
+      "name": "Navori Flickerblade",
+      "id": 6675,
+      "total_cost": 2650.0,
+      "sell_value": 1855.0,
+      "components": [
+        "Dagger"
+      ],
+      "stats": {
+        "attack_speed": 0.7333,
+        "crit_chance": 0.25,
+        "movement_speed": 0.04
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/e7/Navori_Flickerblade_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240506150432",
+      "tags": []
+    },
+    "Opportunity": {
+      "name": "Opportunity",
+      "id": 6701,
+      "total_cost": 2700.0,
+      "sell_value": 1890.0,
+      "components": [
+        "Serrated Dirk",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 83.57,
+        "lethality": 8211.0,
+        "movement_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/30/Opportunity_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240827150210",
+      "tags": []
+    },
+    "Overlord's Bloodmail": {
+      "name": "Overlord's Bloodmail",
+      "id": 2501,
+      "total_cost": 3300.0,
+      "sell_value": 2310.0,
+      "components": [
+        "Tunneler",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 82.11,
+        "hp": 160.0,
+        "hp_regen": 160.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/8d/Overlord%27s_Bloodmail_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240511195413",
+      "tags": []
+    },
+    "Phantom Dancer": {
+      "name": "Phantom Dancer",
+      "id": 3046,
+      "total_cost": 2650.0,
+      "sell_value": 1855.0,
+      "components": [
+        "Dagger"
+      ],
+      "stats": {
+        "attack_speed": 0.9333,
+        "crit_chance": 0.25,
+        "movement_speed": 0.08
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/5/5e/Phantom_Dancer_item_HD.png/revision/latest/scale-to-width-down/64?cb=20230613182250",
+      "tags": []
+    },
+    "Profane Hydra": {
+      "name": "Profane Hydra",
+      "id": 6698,
+      "total_cost": 3200.0,
+      "sell_value": 2240.0,
+      "components": [
+        "Tiamat",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 74.29,
+        "ability_haste": 26.0,
+        "lethality": 18.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/4/40/Profane_Hydra_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240915025338",
+      "tags": []
+    },
+    "Rabadon's Deathcap": {
+      "name": "Rabadon's Deathcap",
+      "id": 3089,
+      "total_cost": 3600.0,
+      "sell_value": 2520.0,
+      "components": [
+        "Needlessly Large Rod"
+      ],
+      "stats": {
+        "ap": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/e4/Rabadon%27s_Deathcap_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240918170301",
+      "tags": []
+    },
+    "Randuin's Omen": {
+      "name": "Randuin's Omen",
+      "id": 3143,
+      "total_cost": 2700.0,
+      "sell_value": 1890.0,
+      "components": [
+        "Warden's Mail",
+        "Cloth Armor"
+      ],
+      "stats": {
+        "armor": 100.0,
+        "hp": 535.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/d/df/Randuin%27s_Omen_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240917003716",
+      "tags": []
+    },
+    "Rapid Firecannon": {
+      "name": "Rapid Firecannon",
+      "id": 3094,
+      "total_cost": 2650.0,
+      "sell_value": 1855.0,
+      "components": [
+        "Zeal",
+        "Cloak of Agility"
+      ],
+      "stats": {
+        "attack_speed": 0.6833,
+        "crit_chance": 0.25,
+        "movement_speed": 0.04
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/4/48/Rapid_Firecannon_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109214154",
+      "tags": []
+    },
+    "Ravenous Hydra": {
+      "name": "Ravenous Hydra",
+      "id": 3074,
+      "total_cost": 3300.0,
+      "sell_value": 2310.0,
+      "components": [
+        "Tiamat",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 79.29,
+        "ability_haste": 31.0,
+        "life_steal": 0.12
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/90/Ravenous_Hydra_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109211614",
+      "tags": []
+    },
+    "Redemption": {
+      "name": "Redemption",
+      "id": 3107,
+      "total_cost": 2300.0,
+      "sell_value": 1610.0,
+      "components": [
+        "Kindlegem",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ability_haste": 31.0,
+        "hp": 82.11,
+        "mp_regen": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/e6/Redemption_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111001608",
+      "tags": []
+    },
+    "Riftmaker": {
+      "name": "Riftmaker",
+      "id": 4633,
+      "total_cost": 3100.0,
+      "sell_value": 2170.0,
+      "components": [
+        "Haunting Guise",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 82.11,
+        "ability_haste": 25.67,
+        "hp": 475.0,
+        "omnivamp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/7a/Riftmaker_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240918173916",
+      "tags": []
+    },
+    "Rod of Ages": {
+      "name": "Rod of Ages",
+      "id": 6657,
+      "total_cost": 2600.0,
+      "sell_value": 1820.0,
+      "components": [
+        "Blasting Wand"
+      ],
+      "stats": {
+        "ap": 0.2,
+        "hp": 82.11,
+        "mana": 300.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/4/4f/Rod_of_Ages_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221115195303",
+      "tags": []
+    },
+    "Runaan's Hurricane": {
+      "name": "Runaan's Hurricane",
+      "id": 3085,
+      "total_cost": 2650.0,
+      "sell_value": 1855.0,
+      "components": [
+        "Zeal",
+        "Cloak of Agility"
+      ],
+      "stats": {
+        "attack_speed": 0.7333,
+        "crit_chance": 0.25,
+        "movement_speed": 0.04
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/ff/Runaan%27s_Hurricane_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111001820",
+      "tags": []
+    },
+    "Rylai's Crystal Scepter": {
+      "name": "Rylai's Crystal Scepter",
+      "id": 3116,
+      "total_cost": 2600.0,
+      "sell_value": 1820.0,
+      "components": [
+        "Blasting Wand"
+      ],
+      "stats": {
+        "ap": 90.0,
+        "hp": 585.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/d/d4/Rylai%27s_Crystal_Scepter_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240827151832",
+      "tags": []
+    },
+    "Seraph's Embrace": {
+      "name": "Seraph's Embrace",
+      "id": 3040,
+      "total_cost": 2900.0,
+      "sell_value": 2030.0,
+      "components": [
+        "Archangel's Staff",
+        "Tear of the Goddess"
+      ],
+      "stats": {
+        "ap": 82.11,
+        "ability_haste": 41.0,
+        "mana": 1.0,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/92/Seraph%27s_Embrace_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111002614",
+      "tags": []
+    },
+    "Serpent's Fang": {
+      "name": "Serpent's Fang",
+      "id": 6695,
+      "total_cost": 2500.0,
+      "sell_value": 1750.0,
+      "components": [
+        "Serrated Dirk",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 83.57,
+        "lethality": 15.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/1/14/Serpent%27s_Fang_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240917005031",
+      "tags": []
+    },
+    "Serylda's Grudge": {
+      "name": "Serylda's Grudge",
+      "id": 6694,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Caulfield's Warhammer",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 59.29,
+        "ability_haste": 36.0,
+        "armor_pen": 0.3,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/1/12/Serylda%27s_Grudge_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109213226",
+      "tags": []
+    },
+    "Shadowflame": {
+      "name": "Shadowflame",
+      "id": 4645,
+      "total_cost": 3200.0,
+      "sell_value": 2240.0,
+      "components": [
+        "Hextech Alternator",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 160.0,
+        "magic_pen": 15.0,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/e4/Shadowflame_item_HD.png/revision/latest/scale-to-width-down/64?cb=20211116192225",
+      "tags": []
+    },
+    "Shurelya's Battlesong": {
+      "name": "Shurelya's Battlesong",
+      "id": 2065,
+      "total_cost": 2200.0,
+      "sell_value": 1540.0,
+      "components": [
+        "Aether Wisp",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 75.0,
+        "ability_haste": 31.0,
+        "mp_regen": 1.25,
+        "movement_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/f1/Shurelya%27s_Battlesong_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922044223",
+      "tags": []
+    },
+    "Solstice Sleigh": {
+      "name": "Solstice Sleigh",
+      "id": 3876,
+      "total_cost": 400.0,
+      "sell_value": 280.0,
+      "components": [
+        "Bounty of Worlds",
+        "Runic Compass",
+        "World Atlas"
+      ],
+      "stats": {
+        "hp": 200.0,
+        "hp_regen": 0.75,
+        "mp_regen": 0.75,
+        "movement_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/32/Solstice_Sleigh_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240827150430",
+      "tags": []
+    },
+    "Spear of Shojin": {
+      "name": "Spear of Shojin",
+      "id": 3161,
+      "total_cost": 3100.0,
+      "sell_value": 2170.0,
+      "components": [
+        "Pickaxe"
+      ],
+      "stats": {
+        "ad": 65.0,
+        "hp": 160.0,
+        "ability_haste": 8211.0,
+        "attack_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/84/Spear_of_Shojin_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221115194227",
+      "tags": []
+    },
+    "Spirit Visage": {
+      "name": "Spirit Visage",
+      "id": 3065,
+      "total_cost": 2700.0,
+      "sell_value": 1890.0,
+      "components": [
+        "Spectre's Cowl",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ability_haste": 20.67,
+        "mr": 68.52,
+        "hp": 525.0,
+        "hp_regen": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/b/b0/Spirit_Visage_item_HD.png/revision/latest/scale-to-width-down/64?cb=20221223051628",
+      "tags": []
+    },
+    "Staff of Flowing Water": {
+      "name": "Staff of Flowing Water",
+      "id": 6616,
+      "total_cost": 2250.0,
+      "sell_value": 1575.0,
+      "components": [
+        "Fiendish Codex",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 160.0,
+        "ability_haste": 31.0,
+        "mp_regen": 160.0,
+        "mr": 160.0,
+        "mana": 82.11,
+        "movement_speed": 0.3
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/9e/Staff_of_Flowing_Water_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109214821",
+      "tags": []
+    },
+    "Statikk Shiv": {
+      "name": "Statikk Shiv",
+      "id": 3087,
+      "total_cost": 2700.0,
+      "sell_value": 1890.0,
+      "components": [
+        "Scout's Slingshot",
+        "Dagger"
+      ],
+      "stats": {
+        "ad": 59.29,
+        "attack_speed": 0.4,
+        "movement_speed": 0.07,
+        "crit_chance": 0.2
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/4/4f/Statikk_Shiv_item_HD.png/revision/latest/scale-to-width-down/64?cb=20230518120817",
+      "tags": []
+    },
+    "Sterak's Gage": {
+      "name": "Sterak's Gage",
+      "id": 3053,
+      "total_cost": 3200.0,
+      "sell_value": 2240.0,
+      "components": [
+        "Pickaxe"
+      ],
+      "stats": {
+        "hp": 82.11,
+        "tenacity": 0.2,
+        "ad": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/0/0a/Sterak%27s_Gage_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109220051",
+      "tags": []
+    },
+    "Stormsurge": {
+      "name": "Stormsurge",
+      "id": 4646,
+      "total_cost": 2900.0,
+      "sell_value": 2030.0,
+      "components": [
+        "Hextech Alternator",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 140.0,
+        "magic_pen": 15.0,
+        "movement_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/3e/Stormsurge_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214910",
+      "tags": []
+    },
+    "Stridebreaker": {
+      "name": "Stridebreaker",
+      "id": 6631,
+      "total_cost": 3300.0,
+      "sell_value": 2310.0,
+      "components": [
+        "Tiamat",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 49.52,
+        "attack_speed": 0.3611,
+        "hp": 575.0,
+        "movement_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/7/7a/Stridebreaker_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111004515",
+      "tags": []
+    },
+    "Sundered Sky": {
+      "name": "Sundered Sky",
+      "id": 6610,
+      "total_cost": 3100.0,
+      "sell_value": 2170.0,
+      "components": [
+        "Tunneler",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 49.52,
+        "ability_haste": 20.67,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/86/Sundered_Sky_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214913",
+      "tags": []
+    },
+    "Sunfire Aegis": {
+      "name": "Sunfire Aegis",
+      "id": 3068,
+      "total_cost": 2700.0,
+      "sell_value": 1890.0,
+      "components": [
+        "Bami's Cinder",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "ability_haste": 20.67,
+        "armor": 66.67,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/e4/Sunfire_Aegis_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240916221143",
+      "tags": []
+    },
+    "Terminus": {
+      "name": "Terminus",
+      "id": 3302,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Hearthbound Axe",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 44.29,
+        "attack_speed": 0.5167,
+        "magic_pen": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/d/df/Terminus_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214915",
+      "tags": []
+    },
+    "The Collector": {
+      "name": "The Collector",
+      "id": 6676,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Pickaxe"
+      ],
+      "stats": {
+        "ad": 78.57,
+        "lethality": 10.0,
+        "crit_chance": 0.25,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/5/52/The_Collector_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240922034639",
+      "tags": []
+    },
+    "Thornmail": {
+      "name": "Thornmail",
+      "id": 3075,
+      "total_cost": 2450.0,
+      "sell_value": 1715.0,
+      "components": [
+        "Bramble Vest",
+        "Cloth Armor"
+      ],
+      "stats": {
+        "armor": 82.11,
+        "hp": 335.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/c/ca/Thornmail_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111005023",
+      "tags": []
+    },
+    "Titanic Hydra": {
+      "name": "Titanic Hydra",
+      "id": 3748,
+      "total_cost": 3300.0,
+      "sell_value": 2310.0,
+      "components": [
+        "Tiamat",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 54.29,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/8/89/Titanic_Hydra_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109211812",
+      "tags": []
+    },
+    "Trailblazer": {
+      "name": "Trailblazer",
+      "id": 3002,
+      "total_cost": 2400.0,
+      "sell_value": 1680.0,
+      "components": [
+        "Winged Moonplate",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "armor": 65.0,
+        "hp": 435.0,
+        "movement_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/2/2e/Trailblazer_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214919",
+      "tags": []
+    },
+    "Trinity Force": {
+      "name": "Trinity Force",
+      "id": 3078,
+      "total_cost": 3333.0,
+      "sell_value": 2333.1,
+      "components": [
+        "Sheen",
+        "Glowing Mote"
+      ],
+      "stats": {
+        "ad": 43.14,
+        "ability_haste": 23.0,
+        "attack_speed": 0.3833,
+        "hp": 423.0,
+        "movement_speed": 8211.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/9e/Trinity_Force_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111011055",
+      "tags": []
+    },
+    "Umbral Glaive": {
+      "name": "Umbral Glaive",
+      "id": 3179,
+      "total_cost": 2600.0,
+      "sell_value": 1820.0,
+      "components": [
+        "Serrated Dirk",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 64.29,
+        "ability_haste": 26.0,
+        "lethality": 15.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/0/05/Umbral_Glaive_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109213521",
+      "tags": []
+    },
+    "Unending Despair": {
+      "name": "Unending Despair",
+      "id": 2502,
+      "total_cost": 2800.0,
+      "sell_value": 1960.0,
+      "components": [
+        "Aegis of the Legion",
+        "Null-Magic Mantle"
+      ],
+      "stats": {
+        "ability_haste": 18.0,
+        "armor": 37.5,
+        "mr": 38.89,
+        "hp": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/9/9d/Unending_Despair_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214923",
+      "tags": []
+    },
+    "Vigilant Wardstone": {
+      "name": "Vigilant Wardstone",
+      "id": 4643,
+      "total_cost": 2300.0,
+      "sell_value": 1610.0,
+      "components": [
+        "Watchful Wardstone"
+      ],
+      "stats": {
+        "ability_haste": 20.0,
+        "armor": 25.0,
+        "mr": 30.0,
+        "hp": 250.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/c/cd/Vigilant_Wardstone_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111011537",
+      "tags": []
+    },
+    "Void Staff": {
+      "name": "Void Staff",
+      "id": 3135,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "Blighting Jewel",
+        "Amplifying Tome"
+      ],
+      "stats": {
+        "ap": 145.0,
+        "magic_pen": 0.4
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/1/14/Void_Staff_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109210758",
+      "tags": []
+    },
+    "Voltaic Cyclosword": {
+      "name": "Voltaic Cyclosword",
+      "id": 6699,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "The Brutalizer",
+        "Glowing Mote"
+      ],
+      "stats": {
+        "ad": 69.29,
+        "ability_haste": 26.0,
+        "lethality": 18.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/4/4b/Voltaic_Cyclosword_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214925",
+      "tags": []
+    },
+    "Warmog's Armor": {
+      "name": "Warmog's Armor",
+      "id": 3083,
+      "total_cost": 3300.0,
+      "sell_value": 2310.0,
+      "components": [
+        "Giant's Belt",
+        "Ruby Crystal"
+      ],
+      "stats": {
+        "hp": 1500.0,
+        "hp_regen": 1.0,
+        "movement_speed": 82.11,
+        "armor": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/6/6e/Warmog%27s_Armor_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240918170750",
+      "tags": []
+    },
+    "Winter's Approach": {
+      "name": "Winter's Approach",
+      "id": 3119,
+      "total_cost": 2400.0,
+      "sell_value": 1680.0,
+      "components": [
+        "Tear of the Goddess"
+      ],
+      "stats": {
+        "ability_haste": 15.0,
+        "hp": 82.11,
+        "mana": 1.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/1/10/Winter%27s_Approach_item_HD.png/revision/latest/scale-to-width-down/64?cb=20211116191607",
+      "tags": []
+    },
+    "Wit's End": {
+      "name": "Wit's End",
+      "id": 3091,
+      "total_cost": 2800.0,
+      "sell_value": 1960.0,
+      "components": [
+        "Recurve Bow",
+        "Dagger"
+      ],
+      "stats": {
+        "mr": 72.78,
+        "attack_speed": 0.6667000000000001,
+        "tenacity": 0.2
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/4/48/Wit%27s_End_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111012107",
+      "tags": []
+    },
+    "Youmuu's Ghostblade": {
+      "name": "Youmuu's Ghostblade",
+      "id": 3142,
+      "total_cost": 2800.0,
+      "sell_value": 1960.0,
+      "components": [
+        "Serrated Dirk",
+        "Long Sword"
+      ],
+      "stats": {
+        "ad": 83.57,
+        "lethality": 18.0,
+        "movement_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/f/f7/Youmuu%27s_Ghostblade_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111012227",
+      "tags": []
+    },
+    "Yun Tal Wildarrows": {
+      "name": "Yun Tal Wildarrows",
+      "id": 3032,
+      "total_cost": 3000.0,
+      "sell_value": 2100.0,
+      "components": [
+        "B. F. Sword"
+      ],
+      "stats": {
+        "ad": 69.29,
+        "attack_speed": 82.11
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/e/eb/Yun_Tal_Wildarrows_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240506150444",
+      "tags": []
+    },
+    "Zaz'Zak's Realmspike": {
+      "name": "Zaz'Zak's Realmspike",
+      "id": 3871,
+      "total_cost": 400.0,
+      "sell_value": 280.0,
+      "components": [
+        "Bounty of Worlds",
+        "Runic Compass",
+        "World Atlas"
+      ],
+      "stats": {
+        "hp": 82.11,
+        "hp_regen": 0.75,
+        "mp_regen": 0.75
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/0/03/Zaz%27Zak%27s_Realmspike_item_HD.png/revision/latest/scale-to-width-down/64?cb=20231204214930",
+      "tags": []
+    },
+    "Zeke's Convergence": {
+      "name": "Zeke's Convergence",
+      "id": 3050,
+      "total_cost": 2300.0,
+      "sell_value": 1610.0,
+      "components": [
+        "Aegis of the Legion",
+        "Null-Magic Mantle"
+      ],
+      "stats": {
+        "ability_haste": 18.0,
+        "armor": 37.5,
+        "mr": 38.89,
+        "hp": 390.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/0/0b/Zeke%27s_Convergence_item_HD.png/revision/latest/scale-to-width-down/64?cb=20240109220207",
+      "tags": []
+    },
+    "Zhonya's Hourglass": {
+      "name": "Zhonya's Hourglass",
+      "id": 3157,
+      "total_cost": 3250.0,
+      "sell_value": 2275.0,
+      "components": [
+        "Needlessly Large Rod"
+      ],
+      "stats": {
+        "ap": 130.0,
+        "armor": 75.0
+      },
+      "image_url": "https://static.wikia.nocookie.net/leagueoflegends/images/3/31/Zhonya%27s_Hourglass_item_HD.png/revision/latest/scale-to-width-down/64?cb=20201111012842",
+      "tags": []
+    }
+  }
+}

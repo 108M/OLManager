@@ -236,6 +236,7 @@ function SidePane({ champion, team, championByPlayerId, timeSec }: {
                 // eslint-disable-next-line react/no-array-index-key
                 key={`blue-item-${idx}`}
                 itemKey={idx < boughtItems ? itemKeys[idx] : undefined}
+                iconUrl={idx < boughtItems ? (champion?.itemImageUrls?.[idx] ?? undefined) : undefined}
                 className={`item h-[18px] w-[18px] ${idx < boughtItems ? "border-emerald-300/90 bg-emerald-400/35" : ""}`}
               />
             ))}
@@ -307,6 +308,7 @@ function SidePane({ champion, team, championByPlayerId, timeSec }: {
                 // eslint-disable-next-line react/no-array-index-key
                 key={`red-item-${idx}`}
                 itemKey={idx < boughtItems ? itemKeys[idx] : undefined}
+                iconUrl={idx < boughtItems ? (champion?.itemImageUrls?.[idx] ?? undefined) : undefined}
                 className={`item h-[18px] w-[18px] ${idx < boughtItems ? "border-emerald-300/90 bg-emerald-400/35" : ""}`}
               />
             ))}

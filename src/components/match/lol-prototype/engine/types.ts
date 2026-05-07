@@ -47,6 +47,7 @@ export interface ChampionState {
   level: number;
   cs: number;
   items: string[];
+  itemImageUrls?: string[];
   trinketKey?: string;
   wardCdUntil?: number;
   sweeperCdUntil?: number;
